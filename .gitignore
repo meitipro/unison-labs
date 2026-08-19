@@ -1,0 +1,32 @@
+# dependencies and build output
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# secrets. The deployer key is a real private key: it is generated locally,
+# read from the environment by the scripts, and must never be committed.
+.env
+.env.*
+!.env.example
+.deployer-key.tmp
+*.key
+*.pem
+
+# throwaway contracts the probes generate
+contracts/_*.py
+
+# logs and OS noise
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# editors
+.idea/
+.vscode/
+
+# python bytecode
+__pycache__/
+*.py[cod]
