@@ -259,12 +259,21 @@ export default function AppConsole({
       {phase.at !== "working" ? (
         <form className="ws-panel" onSubmit={submit}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            {/*
+              THESE ARE TWO DIFFERENT JOBS, not two ways to type the same
+              thing, and labelling them "Paste source" and "From URL" hid that
+              behind a question about input format. Only one of them can ever
+              produce a mark: validators fetch the file themselves, so pasted
+              text is reachable by none of them and no transaction can be sent
+              for it. The labels now name the ACTION, and the one that reviews
+              comes first because it is the point of the screen.
+            */}
             <div className="ws-seg">
-              <button type="button" aria-pressed={mode === "paste"} onClick={() => setMode("paste")}>
-                Paste source
-              </button>
               <button type="button" aria-pressed={mode === "url"} onClick={() => setMode("url")}>
-                From URL
+                {copy.MODE_REVIEW}
+              </button>
+              <button type="button" aria-pressed={mode === "paste"} onClick={() => setMode("paste")}>
+                {copy.MODE_CHECK}
               </button>
             </div>
             <div className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -356,7 +365,7 @@ export default function AppConsole({
 
           <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
             <button type="submit" className="ws-run" disabled={!ready}>
-              {mode === "paste" ? "Run the gate" : copy.BUTTON}
+              {mode === "paste" ? copy.BUTTON_CHECK : copy.BUTTON}
             </button>
             {mode === "url" ? (
               <span className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "normal" }}>

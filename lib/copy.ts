@@ -278,8 +278,11 @@ export const SAMPLES_UNREACHABLE =
    ------------------------------------------------------------------------- */
 
 export const APP_TITLE = "New assay";
+/* Leads with the action that produces a mark. The old line led with pasting,
+   which is the half that cannot, and set the wrong expectation before anyone
+   had touched a control. */
 export const APP_LEDE =
-  "Paste an Intelligent Contract, or give a raw file URL. The gate runs first and costs nothing.";
+  "Give a raw file URL the validators can fetch. The gate runs first, here, and costs nothing.";
 export const APP_SOURCE_LABEL = "Source";
 export const APP_URL_LABEL = "Raw file URL";
 export const APP_SITE_LABEL = "Site, optional and scored separately";
@@ -291,8 +294,22 @@ export const APP_PASTE_PLACEHOLDER = [
 ].join("\n");
 
 /** What the paste box can and cannot do, said where the box is. */
+/**
+ * The two modes, named by what they DO.
+ *
+ * They were "Paste source" and "From URL", which reads as a question about
+ * input format when it is a question about outcome: one sends a transaction
+ * and comes back with a mark, the other cannot and never will. Validators
+ * fetch the file themselves, so text pasted into one browser is reachable by
+ * none of them, and there is nothing for a transaction to point at.
+ */
+export const MODE_REVIEW = "Submit for review";
+export const MODE_CHECK = "Check a draft, free";
+
+export const BUTTON_CHECK = "Check this draft";
+
 export const APP_PASTE_NOTE =
-  "Pasted text runs the gate here and nothing else. A mark has to be checkable by every validator, and text in this browser is reachable by none of them - give a URL for that.";
+  "This runs the gate here in your browser and stops. Nothing is signed, nothing is scored, and no validator sees it - a mark has to be checkable by every validator, and text in this browser is reachable by none of them. Put the file somewhere they can fetch it, then submit it for review.";
 
 export function charCount(n: number): string {
   return n ? `${n.toLocaleString("en-US")} chars` : "nothing pasted yet";
