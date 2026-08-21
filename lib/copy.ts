@@ -97,6 +97,19 @@ export const GATE_PASSED_MEANS =
 export const SUBMIT_MEANS =
   "Submitting signs one transaction. The validators then fetch this file themselves, agree on the bytes, and mark it against the rubric - minutes rather than seconds, because the jury rotates.";
 
+/**
+ * Too big, said with both numbers and a way forward.
+ *
+ * The contract's own refusal is "the source is larger than 48000 bytes",
+ * which is true and tells nobody how far over they are or what to do. It also
+ * used to arrive after a transaction had been signed and settled. This is the
+ * same refusal, free, and specific.
+ */
+export function tooLarge(bytes: number, limit: number): string {
+  const over = Math.round(((bytes - limit) / limit) * 100);
+  return `That file is ${bytes.toLocaleString("en-US")} bytes and the contract takes ${limit.toLocaleString("en-US")}, so it is ${over}% over. Nothing was signed. A contract this size has to be reviewed a file at a time.`;
+}
+
 export const CONNECT_AND_SUBMIT = "Connect a wallet and submit";
 export const CONNECTING = "Check your wallet";
 
@@ -297,6 +310,11 @@ export const GITHUB_CONVERTED = "A GitHub link, so this is what gets read:";
 
 export const SOURCE_NOTE =
   "A raw file url, or the GitHub page you are looking at - either works. Validators fetch it themselves and record its digest, so the file they read is the file the report is about.";
+
+/** The ceiling, stated before a file is chosen rather than after. */
+export function sourceCeiling(limit: number): string {
+  return `Up to ${limit.toLocaleString("en-US")} bytes.`;
+}
 
 export const SITE_EYEBROW = "The site, optional";
 export const SITE_NOTE =

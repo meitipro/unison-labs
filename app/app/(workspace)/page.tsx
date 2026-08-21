@@ -6,7 +6,7 @@ import { getRubric } from "../../../lib/unison";
 export const metadata: Metadata = {
   title: "New assay - Unison",
   description:
-    "Paste an Intelligent Contract or give a raw file URL. The gate runs in your browser and costs nothing.",
+    "Give a raw file URL the validators can fetch. The gate runs in your browser and costs nothing.",
 };
 
 export const revalidate = 60;
@@ -25,5 +25,14 @@ export default async function AppPage() {
   for (const subject of rubric?.subjects ?? []) {
     for (const criterion of subject.criteria) names[criterion.id] = criterion.name;
   }
-  return <AppConsole names={names} rubric={rubric?.version ?? ""} />;
+  /* The contract publishes its own source-size ceiling. Handing it to the
+     console lets the browser refuse an oversized file for nothing, instead of
+     letting a transaction go out and come back refused. */
+  return (
+    <AppConsole
+      names={names}
+      rubric={rubric?.version ?? ""}
+      maxSourceBytes={rubric?.limits?.source_bytes ?? null}
+    />
+  );
 }

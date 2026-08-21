@@ -73,10 +73,13 @@ type Phase =
 export default function AppConsole({
   names,
   rubric,
+  maxSourceBytes,
 }: {
   names: Record<string, string>;
   /** The rubric version the contract publishes, for the header chip. */
   rubric: string;
+  /** The contract's own source ceiling, or null when it could not be read. */
+  maxSourceBytes: number | null;
 }) {
   const wallet = useWallet();
   const [sourceUrl, setSourceUrl] = useState("");
@@ -139,6 +142,25 @@ export default function AppConsole({
           at: "unreadable",
           why: "This browser was not allowed to read that url, so the free gate could not run here. The validators fetch it themselves and the contract runs the same gate.",
         });
+        return;
+      }
+
+      /*
+       * THE SIZE CEILING, CHECKED HERE RATHER THAN ON CHAIN.
+       *
+       * The contract refuses anything past `limits.source_bytes`, and it used
+       * to be the transaction that found out: sign, wait for consensus, and
+       * come back with "the source is larger than 48000 bytes". The bytes are
+       * already in this browser at this point and the limit is published, so
+       * the same answer is free and instant.
+       *
+       * Measured in BYTES, not characters. A source with any non-ASCII in it
+       * is longer than its string length, and the contract counts what it
+       * receives.
+       */
+      const bytes = new TextEncoder().encode(text).length;
+      if (maxSourceBytes && bytes > maxSourceBytes) {
+        setPhase({ at: "refused", gate: null, why: copy.tooLarge(bytes, maxSourceBytes) });
         return;
       }
 
@@ -232,7 +254,7 @@ export default function AppConsole({
         provisional: outcome.provisional,
       });
     },
-    [sourceUrl, siteUrl, spec, wallet],
+    [sourceUrl, siteUrl, spec, wallet, maxSourceBytes],
   );
 
   const gate = "gate" in phase ? phase.gate : null;
@@ -349,6 +371,15 @@ export default function AppConsole({
               {copy.SOURCE_NOTE}
             </p>
           )}
+
+          {/* The ceiling sits outside the conversion branch, because it is true
+              either way and a GitHub link is exactly the case where somebody is
+              about to hand over a whole repository's biggest file. */}
+          {maxSourceBytes ? (
+            <p className="ws-mono-quiet" style={{ marginTop: 10, whiteSpace: "normal" }}>
+              {copy.sourceCeiling(maxSourceBytes)}
+            </p>
+          ) : null}
 
           {/* The site is a second subject with its own ten, not an extra field
               on the first. It reads as an afterthought when it sits flush
