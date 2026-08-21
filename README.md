@@ -14,8 +14,7 @@ scored, and judged by the network rather than by us.
 
 **[Open the live site](https://unisonlabs.tech)** &nbsp;.&nbsp;
 [Run a review](https://unisonlabs.tech/app) &nbsp;.&nbsp;
-[Read the rubric](https://unisonlabs.tech/rubric) &nbsp;.&nbsp;
-[Report 8801](https://unisonlabs.tech/r/8801)
+[Read the rubric](https://unisonlabs.tech/rubric)
 
 </div>
 
@@ -26,13 +25,15 @@ scored, and judged by the network rather than by us.
 | | |
 | --- | --- |
 | Site | https://unisonlabs.tech |
-| Contract | [`0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4`](https://explorer-studio.genlayer.com/address/0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4) on GenLayer **studionet** |
+| Contract | [`0x39532a73F2A66552bDfE7813bF4273c02F547762`](https://explorer-studio.genlayer.com/address/0x39532a73F2A66552bDfE7813bF4273c02F547762) on GenLayer **studionet** |
 | Rubric | v1, frozen by the transaction that deployed the contract |
-| First mark it ever issued | [report 8801](https://unisonlabs.tech/r/8801), a real contract at 3/10 unfit |
 
-`npm run match -- 0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4` checks the
-deployed bytes against `contracts/touchstone.py` byte for byte. It currently
-answers `identical YES`.
+`npm run match -- 0x39532a73F2A66552bDfE7813bF4273c02F547762` checks the
+deployed bytes against `contracts/touchstone.py` byte for byte.
+
+Line endings are pinned to LF in `.gitattributes` precisely so that check is
+not platform dependent: without it a Windows checkout produces CRLF, a Linux
+one produces LF, and the same commit yields two different digests.
 
 ---
 
