@@ -17,11 +17,17 @@ import { useRef, useState } from "react";
 
 import * as copy from "../lib/copy";
 import { SPEC } from "../lib/gate";
-import type { Criterion } from "../lib/types";
+import type { Criterion, Stats } from "../lib/types";
 
 const TABS = copy.MACHINERY_TABS;
 
-export default function Machinery({ criteria }: { criteria: Criterion[] }) {
+export default function Machinery({
+  criteria,
+  stats,
+}: {
+  criteria: Criterion[];
+  stats: Stats | null;
+}) {
   const [tab, setTab] = useState(0);
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -91,12 +97,18 @@ export default function Machinery({ criteria }: { criteria: Criterion[] }) {
               </p>
             </div>
             <div>
-              {/* The real published gate, not a retyped list of it. */}
+              {/*
+                The real published gate, not a retyped list of it.
+
+                EACH ROW USED TO CARRY A GREEN TICK. Nothing has been submitted
+                on this page, so there was nothing for a tick to be the result
+                of -- it read as six checks passing when it was only a list of
+                what the gate looks for. A tick belongs on a report, where one
+                was actually earned. Here the marker is a neutral rule.
+              */}
               {SPEC.checks.map((check) => (
                 <div key={check.id} className="gate-row">
-                  <span className="gate-glyph pass" aria-hidden="true">
-                    ✓
-                  </span>
+                  <span className="gate-glyph" aria-hidden="true" />
                   <span>{check.name.toLowerCase()}</span>
                   <span className="gate-req">{check.required ? "REQ" : ""}</span>
                 </div>
@@ -114,7 +126,7 @@ export default function Machinery({ criteria }: { criteria: Criterion[] }) {
               </div>
               <p className="lede" style={{ marginTop: 12, maxWidth: "44ch", fontSize: 15 }}>
                 Every point on every criterion has a sentence attached to it - that is
-                what makes exact agreement between different models reachable at all
+                what makes agreement between independent readers reachable at all
               </p>
             </div>
             <div style={{ display: "grid", gap: 14, fontSize: 14.5, lineHeight: 1.62 }}>
@@ -155,16 +167,37 @@ export default function Machinery({ criteria }: { criteria: Criterion[] }) {
                 the anchor that caused it
               </p>
             </div>
+            {/*
+              FIVE ROWS OF `node 01 ... ?` USED TO SIT HERE, each with an empty
+              bar. They were the design's five nodes holding a 9, emptied out
+              because no per-node mark exists to read -- which left five
+              question marks explaining nothing in the middle of the panel. The
+              same placeholder was removed from the consensus section earlier
+              and survived here behind a tab.
+
+              What replaces it is the only thing a contract does learn about its
+              own consensus: how many reviews stood, how many were suspended by
+              a split, and how many marks have been contested since.
+            */}
             <div style={{ display: "grid", gap: 12 }}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <div key={n} className="node-row">
-                  <span>node {String(n).padStart(2, "0")}</span>
-                  <span className="bar">
-                    <span style={{ width: "100%", opacity: 0.3 }} />
-                  </span>
-                  <span style={{ color: "var(--white)" }}>?</span>
+              {stats ? (
+                <div style={{ display: "grid", gap: 2 }}>
+                  {[
+                    { n: stats.reports, label: "reports the network agreed on" },
+                    { n: stats.splits, label: "suspended, because it did not" },
+                    { n: stats.contested, label: "marks contested since" },
+                  ].map((row) => (
+                    <div key={row.label} className="gate-row" style={{ gridTemplateColumns: "44px minmax(0, 1fr)" }}>
+                      <span className="mono" style={{ fontSize: 20, lineHeight: 1.2, color: "var(--white)" }}>
+                        {row.n}
+                      </span>
+                      <span style={{ alignSelf: "center" }}>{row.label}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p className="notice">{copy.CHAIN_UNREACHABLE}</p>
+              )}
               <p className="body" style={{ marginTop: 4, fontSize: 13 }}>
                 A contract receives one aggregated bit per validator and cannot count
                 its own jury. The votes that actually happened are shown on the report.

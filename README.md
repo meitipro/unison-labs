@@ -68,9 +68,14 @@ has to be trusted by somebody who did not make it**.
 A score on a contract is worth exactly what the reader thinks of whoever
 produced it. Run it through one model behind one API key and you have an
 opinion with a logo on it. Here the rubric is public before anything is scored,
-several validators running genuinely different models read the same bytes and
-mark them independently, and the report stands only where they agree under a
-rule the contract also published.
+several validators read the same bytes and mark them independently, and the
+report stands only where they agree under a rule the contract also published.
+
+The pool is not uniformly diverse and the product does not pretend it is: four
+of Studio's twenty nodes name the model they run, and the other sixteen name a
+routing policy that may land on the same model as its neighbour. What is
+guaranteed is that the readings are independent and that agreement is required,
+not that the readers differ.
 
 That boundary is the whole architecture:
 

@@ -4,7 +4,13 @@ import { WorkspaceHeader } from "../../../../components/WorkspaceShell";
 import * as copy from "../../../../lib/copy";
 import { NETWORK_LABEL } from "../../../../lib/chain";
 import { getStats } from "../../../../lib/touchstone";
-import { POOL_IS_READABLE, familiesOf, getPool, modelLabel } from "../../../../lib/validators";
+import {
+  POOL_IS_READABLE,
+  commitment,
+  displayModel,
+  getPool,
+  modelLabel,
+} from "../../../../lib/validators";
 
 export const metadata: Metadata = {
   title: "Validators - Unison",
@@ -24,16 +30,23 @@ export const revalidate = 60;
  * Five nines on this screen would be the product inventing the exact quantity
  * it exists to establish.
  *
- * What can be shown is real and is more interesting: every validator's address,
- * stake, provider and model, from `sim_getAllValidators`. The figure worth
- * reading is the count of distinct model FAMILIES, because two nodes running
- * one model are not two independent readings of anything -- and Studio lists
- * `openai/gpt-5.4` and `policy:prd-gpt-5-4` as separate entries while both are
- * the same model behind different routing.
+ * What can be shown is real: every validator's address, stake, provider and
+ * model, from `sim_getAllValidators`.
+ *
+ * THE DISTINCTION THIS PANE EXISTS TO MAKE is between a node that NAMES the
+ * model it runs and a node that names a ROUTING POLICY. Four of Studio's twenty
+ * do the former. The other sixteen carry `policy:prd-...`, whose `policy_ir`
+ * lists two or three candidate families and lets the router pick one per call
+ * on price, latency and success rate -- so `policy:prd-grok` may run grok-4.3,
+ * gpt-5.4 or gemini-3-flash-preview and nothing published says which it ran.
+ *
+ * Collapsing those policy names to families, which this page used to do, read
+ * as a pool of twelve independent models when the truth is four commitments
+ * and sixteen nodes that may all have landed on the same model.
  */
 export default async function ValidatorsPane() {
   const [pool, stats] = await Promise.all([getPool(), getStats()]);
-  const families = pool ? familiesOf(pool) : [];
+  const counts = pool ? commitment(pool) : { named: 0, routed: 0 };
 
   return (
     <>
@@ -63,17 +76,18 @@ export default async function ValidatorsPane() {
               <div className="ws-fig-n">{pool.validators.length.toLocaleString("en-US")}</div>
               <div className="ws-fig-l">In the pool</div>
             </div>
-            {/* Model STRINGS and model FAMILIES are different counts and the
-                difference matters here: Studio lists `openai/gpt-5.4` and
-                `policy:prd-gpt-5-4` separately, but two nodes on the same
-                underlying model are not two independent readings. Showing only
-                the larger number would overstate how much the jury disagrees
-                with itself by construction. */}
+            {/* The figure that matters is how many nodes NAME a model. The
+                rest carry `policy:prd-...`, a routing policy whose policy_ir
+                lists two or three families and which picks one per call. A
+                count of "distinct models" that included those would be
+                counting policies as though they were commitments. */}
             <div>
-              <div className="ws-fig-n">{families.length}</div>
-              <div className="ws-fig-l">
-                Model families, across {pool.models.length} entries
-              </div>
+              <div className="ws-fig-n">{counts.named}</div>
+              <div className="ws-fig-l">Name the model they run</div>
+            </div>
+            <div>
+              <div className="ws-fig-n">{counts.routed}</div>
+              <div className="ws-fig-l">Run a routing policy</div>
             </div>
             <div>
               <div className="ws-fig-n">2n + 1</div>
@@ -101,8 +115,18 @@ export default async function ValidatorsPane() {
                   className="mono"
                   style={{ marginTop: 14, fontSize: 13.5, lineHeight: 1.4, letterSpacing: "-0.01em", color: "var(--ai)", overflowWrap: "anywhere" }}
                 >
-                  {modelLabel(validator.model) || "not published"}
+                  {validator.namesAModel
+                    ? displayModel(validator.model)
+                    : modelLabel(validator.model) || "not published"}
                 </div>
+                {/* A policy is not a model, and the node is not hiding it -- it
+                    genuinely does not know until the router picks. Naming the
+                    candidates is the most this page can honestly say. */}
+                {!validator.namesAModel && validator.candidates.length ? (
+                  <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: "var(--am)" }}>
+                    routing policy, picks one of {validator.candidates.join(", ")}
+                  </div>
+                ) : null}
                 <div style={{ marginTop: 12, display: "flex", gap: 12, fontSize: 12.5, color: "var(--am)" }}>
                   <span>{validator.provider || "unknown provider"}</span>
                   <span style={{ marginLeft: "auto", whiteSpace: "nowrap" }}>

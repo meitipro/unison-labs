@@ -61,15 +61,20 @@ export const COUNTER_POOL = "Validators in the pool";
  * Where the node does not answer the marquee is left out entirely rather than
  * falling back to a list, which would be an assertion dressed as a reading.
  */
-export const POOL_LABEL = "Models in the validator pool";
+export const POOL_LABEL = "Models the validator pool commits to";
 export const POOL_UNKNOWN = "The node did not answer, so the pool is not shown.";
-export const POOL_CRITERIA = [
-  "agreement rule fits",
-  "needs genlayer at all",
-  "untrusted input stays untrusted",
-  "failure branches exist",
-  "boundary drawn where it belongs",
-];
+
+/**
+ * What the strip does not name.
+ *
+ * The rest of the pool runs a routing policy rather than a fixed model, and
+ * saying so is more informative than a longer row of names would be: it is the
+ * reason two validators can read one file and reach different answers.
+ */
+export function poolFoot(routed: number): string {
+  if (routed <= 0) return "Every node in the pool names the model it runs.";
+  return `${routed} more nodes run a routing policy rather than a fixed model, so what they ran is not published.`;
+}
 
 export const CONSENSUS_EYEBROW = "Consensus";
 
@@ -121,8 +126,13 @@ export const COMMITMENTS: Array<{ title: string; body: string }> = [
     body: "A score against a rubric written after the fact is worth nothing, so ours is published before anyone was scored, with an anchor on every point",
   },
   {
+    /* "Validators running different models" was the claim here. Sixteen of the
+       twenty nodes in the pool run a routing policy that may pick the same
+       model as its neighbour, so the diversity is not something this product
+       can promise. What it can promise is that the readings are independent
+       and that agreement is required, which is the actual argument. */
     title: "One model is only one opinion",
-    body: "Validators running different models each read the same raw file, and the mark only stands where they agree under a published rule",
+    body: "Every validator reads the same raw file and marks it on its own, and the mark only stands where they agree under a published rule",
   },
   {
     title: "Totals are arithmetic, not judgment",

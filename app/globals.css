@@ -513,19 +513,6 @@ textarea:focus-visible,
   padding: 22px;
 }
 
-.node-card {
-  background: var(--panel-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 18px;
-  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), border-color 300ms ease;
-}
-
-.node-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(var(--gold-rgb), 0.4);
-}
-
 .warn-card {
   background: var(--fail-panel);
   border: 1px solid var(--fail-line);
@@ -649,16 +636,6 @@ textarea:focus-visible,
    Node bars, marks, key/value
    --------------------------------------------------------------------------- */
 
-.node-row {
-  display: grid;
-  grid-template-columns: 68px 1fr auto;
-  gap: 14px;
-  align-items: center;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--dim);
-}
-
 .bar {
   height: 3px;
   border-radius: 2px;
@@ -752,8 +729,15 @@ textarea:focus-visible,
   padding: 6px 0;
 }
 
-.gate-glyph.pass { color: var(--gold-lt); }
-.gate-glyph.miss { color: var(--fail); }
+/* A neutral rule, not a verdict. This list is what the gate looks for, so a
+   tick here would be the result of a run that never happened. */
+.gate-glyph {
+  align-self: center;
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gold);
+}
 
 .gate-req {
   font-family: var(--mono);
@@ -792,71 +776,63 @@ textarea:focus-visible,
 }
 
 /* ---------------------------------------------------------------------------
-   The marquee rails
+   The named-model strip
+   ---------------------------------------------------------------------------
+
+   Was a scrolling marquee of twelve "model families". Sixteen of the twenty
+   nodes in the pool name a ROUTING POLICY, not a model, so most of those chips
+   were this page guessing. Only the models the network commits to are shown,
+   which is a short list, so it is set large and still. Nothing here moves.
    --------------------------------------------------------------------------- */
 
-.marquee-wrap {
-  padding: 24px 0;
+.pool-strip {
+  padding: clamp(30px, 4vw, 46px) var(--gutter);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  overflow: hidden;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
 }
 
-/*
- * Two copies of the list, translated by exactly -50%, which lands copy two
- * where copy one started and loops seamlessly.
- *
- * THAT ONLY HOLDS WHILE ONE COPY IS AT LEAST AS WIDE AS THE VIEWPORT. With
- * `width: max-content` and twelve short chips a copy came out about 1050px, so
- * on anything wider than that the track ran out mid-screen: the chips clumped
- * against the left edge, slid away, and left a band of empty black on the
- * right. It read as the row being knocked sideways rather than as a marquee.
- *
- * The fix is structural rather than a guess at how many repeats are enough.
- * Each copy is its own flex row with `min-width: 100vw`, so a copy is never
- * narrower than the screen and -50% is never less than one screen of travel.
- * Where the chips do not fill that width they are spread across it instead of
- * being left to huddle at one end.
- */
-.marquee,
-.marquee-back {
+.pool-row {
+  margin: 18px auto 0;
+  max-width: var(--shell);
   display: flex;
-  width: max-content;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(10px, 1.4vw, 16px);
 }
 
-.marquee {
-  animation: unmarq 38s linear infinite;
-}
-
-.marquee-back {
-  margin-top: 10px;
-  animation: unmarqb 44s linear infinite;
-}
-
-.marquee-copy {
-  flex: none;
-  min-width: 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  gap: 10px;
-}
-
-.marquee-back .marquee-copy {
-  gap: 26px;
-}
-
-.chip-outline {
+.pool-card {
+  flex: 1 1 auto;
+  min-width: min(100%, 210px);
+  max-width: 300px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: clamp(20px, 2.4vw, 30px) clamp(16px, 2vw, 26px);
   border: 1px solid var(--line-2);
-  border-radius: 999px;
-  padding: 8px 18px;
-  font-size: 12.5px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  font-size: clamp(16px, 1.5vw, 20px);
   font-weight: 500;
-  color: var(--text-2);
-  white-space: nowrap;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--white);
+  transition: border-color 220ms ease, background 220ms ease;
 }
+
+.pool-card:hover {
+  border-color: rgba(var(--gold-rgb), 0.4);
+  background: var(--panel-3);
+}
+
+.pool-foot {
+  margin: 16px auto 0;
+  max-width: 62ch;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dim);
+}
+
 
 /* ---------------------------------------------------------------------------
    Mobile menu
@@ -1145,8 +1121,6 @@ textarea:focus-visible,
   from { opacity: 0; transform: translateX(-14px); }
   to { opacity: 1; transform: none; }
 }
-@keyframes unmarq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@keyframes unmarqb { from { transform: translateX(-50%); } to { transform: translateX(0); } }
 @keyframes unblink { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 @keyframes unbloom {
   from { transform: scale(0.82); opacity: 0.55; }
@@ -1202,10 +1176,6 @@ textarea:focus-visible,
     transform: none !important;
     filter: none !important;
   }
-  .marquee,
-  .marquee-back {
-    animation: none !important;
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1232,9 +1202,5 @@ textarea:focus-visible,
   .kv-row {
     grid-template-columns: 64px minmax(0, 1fr);
     gap: 12px;
-  }
-  .node-row {
-    grid-template-columns: 56px 1fr auto;
-    gap: 10px;
   }
 }

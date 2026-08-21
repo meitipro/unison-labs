@@ -29,13 +29,41 @@ export type Validator = {
   stake: number;
   provider: string;
   model: string;
+  /**
+   * The model families this validator may actually run.
+   *
+   * MOST NODES DO NOT NAME A MODEL. Sixteen of the twenty in Studio's pool
+   * carry `policy:prd-...`, which is a ROUTING POLICY, not a model: its
+   * `policy_ir` lists two or three families and the router picks one per call
+   * by price, latency and success rate. `policy:prd-grok` may run grok-4.3,
+   * gpt-5.4 or gemini-3-flash-preview, and nothing published says which it ran.
+   *
+   * So this is the candidate set, and `namesAModel` says whether the node
+   * committed to one. Rendering a policy name as though it were the model is
+   * how the marquee came to claim a Grok node that might have been GPT.
+   */
+  candidates: string[];
+  namesAModel: boolean;
 };
+
+/** Pull every `family_eq` out of a policy_ir tree. */
+function familiesIn(node: unknown, found: string[] = []): string[] {
+  if (!Array.isArray(node)) return found;
+  if (node[0] === "family_eq" && typeof node[1] === "string") found.push(node[1]);
+  for (const child of node) familiesIn(child, found);
+  return found;
+}
 
 export type Pool = {
   validators: Validator[];
-  /** Distinct models across the pool -- the number that matters, since two
-   *  nodes on one model are not two independent readings. */
+  /** Every distinct model string, policies included. */
   models: string[];
+  /**
+   * The models the pool actually commits to, in the form the network prints
+   * them. These are the only names this product will put on a screen: a node
+   * that names a routing policy has not told anybody what it runs.
+   */
+  named: string[];
   providers: string[];
 };
 
@@ -62,17 +90,28 @@ export const getPool = cache(async function getPool(): Promise<Pool | null> {
 
     const validators: Validator[] = json.result
       .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
-      .map((row) => ({
-        address: typeof row.address === "string" ? row.address : "",
-        stake: typeof row.stake === "number" ? row.stake : 0,
-        provider: typeof row.provider === "string" ? row.provider : "",
-        model: typeof row.model === "string" ? row.model : "",
-      }))
+      .map((row) => {
+        const model = typeof row.model === "string" ? row.model : "";
+        const config = (row.config ?? {}) as Record<string, unknown>;
+        const candidates = [...new Set(familiesIn(config.policy_ir))].sort();
+        return {
+          address: typeof row.address === "string" ? row.address : "",
+          stake: typeof row.stake === "number" ? row.stake : 0,
+          provider: typeof row.provider === "string" ? row.provider : "",
+          model,
+          candidates,
+          /* A policy names no model. Anything else is the node committing. */
+          namesAModel: model.length > 0 && !model.startsWith("policy:"),
+        };
+      })
       .filter((validator) => validator.address.length > 0);
 
     return {
       validators,
       models: [...new Set(validators.map((v) => v.model).filter(Boolean))].sort(),
+      named: [
+        ...new Set(validators.filter((v) => v.namesAModel).map((v) => v.model)),
+      ].sort(),
       providers: [...new Set(validators.map((v) => v.provider).filter(Boolean))].sort(),
     };
   } catch {
@@ -90,38 +129,40 @@ export function modelLabel(model: string): string {
 }
 
 /**
- * The family a model belongs to, for the landing's marquee.
+ * `openai/gpt-5.4` -> `GPT-5.4`, `anthropic/claude-sonnet-4.6` -> `Claude
+ * Sonnet 4.6`. The vendor prefix is routing, not identity.
  *
- * Studio names the same family several ways -- `openai/gpt-5.4`,
- * `policy:prd-gpt-5-4` -- and a marquee listing both is listing one model
- * twice. This collapses them to the name a reader recognises. Anything
- * unrecognised is passed through rather than dropped: a model this list has
- * not heard of is still in the pool, and silently hiding it would make the
- * marquee a curated claim instead of a reading.
+ * ONLY EVER CALLED ON A NAME THE NETWORK COMMITTED TO. There is deliberately
+ * no mapping from a routing policy to a family here: `policy:prd-grok` may run
+ * grok-4.3, gpt-5.4 or gemini-3-flash-preview and the network does not say
+ * which, so any label for it would be this page guessing.
  */
-const FAMILIES: Array<[RegExp, string]> = [
-  [/gpt-oss/i, "GPT-OSS"],
-  [/gpt/i, "GPT"],
-  [/sonnet|claude/i, "Claude"],
-  [/gemini/i, "Gemini"],
-  [/gemma/i, "Gemma"],
-  [/deepseek/i, "DeepSeek"],
-  [/grok/i, "Grok"],
-  [/mistral/i, "Mistral"],
-  [/kimi/i, "Kimi"],
-  [/qwen/i, "Qwen"],
-  [/glm/i, "GLM"],
-  [/minimax/i, "MiniMax"],
-  [/llama/i, "Llama"],
-];
-
-export function modelFamily(model: string): string {
-  const name = modelLabel(model).replace(/^prd-/, "");
-  for (const [pattern, label] of FAMILIES) if (pattern.test(name)) return label;
-  return name;
+export function displayModel(model: string): string {
+  const bare = model.includes("/") ? model.slice(model.indexOf("/") + 1) : model;
+  return bare
+    .split("-")
+    .map((part) => {
+      if (/^v?[\d.]+$/i.test(part)) return part;
+      if (part.length <= 3) return part.toUpperCase();
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" ")
+    .replace(/Gpt/g, "GPT");
 }
 
-/** The distinct families in the pool, in a stable order. */
-export function familiesOf(pool: Pool): string[] {
-  return [...new Set(pool.models.map(modelFamily))].sort((a, b) => a.localeCompare(b));
+/**
+ * The models this pool actually commits to, ready to print.
+ *
+ * Four of Studio's twenty nodes name one; the rest name a policy. So this is a
+ * short list on purpose, and the interface shows it large rather than padding
+ * it out with names nobody published.
+ */
+export function namedModels(pool: Pool): string[] {
+  return pool.named.map(displayModel);
+}
+
+/** How many nodes committed to a model, and how many named a policy. */
+export function commitment(pool: Pool): { named: number; routed: number } {
+  const named = pool.validators.filter((v) => v.namesAModel).length;
+  return { named, routed: pool.validators.length - named };
 }

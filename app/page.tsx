@@ -1,7 +1,7 @@
 /**
  * The landing, from `Unison Nocturne.dc.html`.
  *
- * Section for section: hero over the slab, the validator-pool marquee, story,
+ * Section for section: hero over the slab, the named-model strip, story,
  * consensus, machinery, result, record, close, footer.
  *
  * WHERE THIS DEPARTS FROM THE DESIGN, and why. The mockup fills its result and
@@ -21,14 +21,9 @@ import * as copy from "../lib/copy";
 import * as fmt from "../lib/format";
 import { IS_LIVE, NETWORK_LABEL, TOUCHSTONE, explorerAddress, HAS_EXPLORER } from "../lib/chain";
 import { getNewestReport, getRubric, getStats } from "../lib/touchstone";
-import { familiesOf, getPool } from "../lib/validators";
+import { commitment, getPool, namedModels } from "../lib/validators";
 
 export const revalidate = 60;
-
-/** The list laid end to end `times` over, for a marquee copy. */
-function repeat<T>(items: T[], times: number): T[] {
-  return Array.from({ length: times }, () => items).flat();
-}
 
 export default async function LandingPage() {
   const [rubric, stats, pool] = await Promise.all([getRubric(), getStats(), getPool()]);
@@ -45,7 +40,8 @@ export default async function LandingPage() {
     : null;
 
   const poolSize = pool ? pool.validators.length : null;
-  const families = pool ? familiesOf(pool) : [];
+  const named = pool ? namedModels(pool) : [];
+  const routed = pool ? commitment(pool).routed : 0;
   const agreement = rubric?.agreement ?? null;
 
   const counters: Counter[] = [
@@ -68,51 +64,31 @@ export default async function LandingPage() {
 
       <Hero counters={counters} />
 
-      {/* ---------------- the pool marquee -------------------------------
-          The model names are the network's own answer to sim_getAllValidators,
-          collapsed to families. Where the node does not answer there is no
-          marquee: a hardcoded list of plausible models is exactly the kind of
-          decoration this product cannot carry, since the whole claim is that
-          the reading is done by somebody other than us.                      */}
-      <div className="marquee-wrap">
-        {families.length ? (
-          <>
-            <div
-              className="eyebrow"
-              style={{ margin: "0 auto 16px", padding: "0 var(--gutter)", textAlign: "center" }}
-            >
-              {copy.POOL_LABEL}
-            </div>
-            {/* Two copies, each its own row, because the loop translates by
-                exactly one copy. Each copy repeats the list enough times to
-                outrun a normal desktop, so the chips keep the design's 10px
-                gap rather than being stretched apart to fill; `min-width:100vw`
-                in globals.css is the backstop past that. */}
-            <div className="marquee" aria-hidden="true">
-              {[0, 1].map((copyIndex) => (
-                <div key={copyIndex} className="marquee-copy">
-                  {repeat(families, 3).map((name, i) => (
-                    <span key={`${name}-${i}`} className="chip-outline">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </>
-        ) : null}
-        <div className="marquee-back" aria-hidden="true">
-          {[0, 1].map((copyIndex) => (
-            <div key={copyIndex} className="marquee-copy">
-              {repeat(copy.POOL_CRITERIA, 3).map((name, i) => (
-                <span key={`${name}-${i}`} className="mono" style={{ fontSize: 11.5, color: "var(--dim)", whiteSpace: "nowrap" }}>
-                  {name}
-                </span>
-              ))}
-            </div>
-          ))}
+      {/* ---------------- the models the pool commits to -------------------
+          This was a scrolling marquee of twelve "model families", which was
+          wrong twice over. Sixteen of the twenty nodes carry `policy:prd-...`,
+          a ROUTING POLICY that picks among two or three families per call --
+          so a chip reading "Grok" stood for a node that may well have run
+          GPT-5.4, and the strip was asserting a diversity nobody published.
+
+          Only the four nodes that name a concrete model are represented here.
+          That is a short list, so it is set large and still rather than
+          padded out and slid past.                                          */}
+      {named.length ? (
+        <div className="pool-strip">
+          <div className="eyebrow" style={{ textAlign: "center" }}>
+            {copy.POOL_LABEL}
+          </div>
+          <div className="pool-row">
+            {named.map((name) => (
+              <div key={name} className="pool-card">
+                {name}
+              </div>
+            ))}
+          </div>
+          <p className="pool-foot">{copy.poolFoot(routed)}</p>
         </div>
-      </div>
+      ) : null}
 
       {/* ---------------- story ------------------------------------------ */}
       <section id="story" className="shell section on-view">
@@ -242,7 +218,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ---------------- machinery -------------------------------------- */}
-      <Machinery criteria={contractCriteria} />
+      <Machinery criteria={contractCriteria} stats={stats} />
 
       {/* ---------------- the result ------------------------------------- */}
       <section id="result" className="shell section on-view">
