@@ -2,14 +2,14 @@
 
 Everything here was measured on Studio against a deployed contract. It is kept
 out of `contracts/touchstone.py` because on-chain bytes are a real cost and a
-build diary is not part of the published standard — the contract keeps the
+build diary is not part of the published standard - the contract keeps the
 rules, this file keeps the reasoning.
 
 ## The three consensus rounds
 
 | # | Round | What every validator does | What agreement is |
 |---|---|---|---|
-| 1 | `fetch_source` | GETs the url, normalises the bytes | `strict_eq` — byte identical |
+| 1 | `fetch_source` | GETs the url, normalises the bytes | `strict_eq` - byte identical |
 | 2 | `mark_contract` | Marks the source against five anchors | the published tolerance |
 | 3 | `mark_site` | Renders the page and marks it | the published tolerance |
 
@@ -38,8 +38,8 @@ part worth dwelling on: nothing was broken. One receipt put numbers on the
 split:
 
 ```json
-{"0x2eD9…":"agree","0x5a14…":"disagree","0xA628…":"disagree",
- "0xF9ce…":"disagree","0xf17d…":"idle"}
+{"0x2eD9...":"agree","0x5a14...":"disagree","0xA628...":"disagree",
+ "0xF9ce...":"disagree","0xf17d...":"idle"}
 ```
 
 Five validators, one agree, three disagree, one idle.
@@ -48,7 +48,7 @@ The cause is not model diversity and it is not prompt injection. Five
 independent three-way judgments have to match five times over, and asking any
 model twice whether an agreement rule is "looser than the output needs" gets two
 reasonable and different answers. A rubric that can never issue a report is not
-stricter than one that can — it has no output.
+stricter than one that can - it has no output.
 
 ### The tolerance alone did not fix it
 
@@ -69,8 +69,8 @@ looked identical from outside:
 
 ### Then the actual measurement
 
-A probe generated from the contract's own pure half — same anchors, same fact
-sheet, same prompt builder — marked one source three times on **one node**:
+A probe generated from the contract's own pure half - same anchors, same fact
+sheet, same prompt builder - marked one source three times on **one node**:
 
 ```
 [0, 2, 0, 1, 0]   total 3   unfit
@@ -88,7 +88,7 @@ sheet, same prompt builder — marked one source three times on **one node**:
 
 One model, one character-identical prompt, and the **band itself flipped**. No
 tolerance defined across nodes can rescue that, because the variance is not
-between validators — it is inside a single one.
+between validators - it is inside a single one.
 
 The two stable criteria are exactly the two the fact sheet spoke to directly.
 That is the finding: the fact sheet works, and it was not being used for the
@@ -98,11 +98,11 @@ criteria that needed it most.
 
 ### 1. Facts are computed in code, not judged by a model
 
-`contract_evidence()` counts the discriminators the anchors actually turn on —
+`contract_evidence()` counts the discriminators the anchors actually turn on -
 how many equivalence principles appear, whether `strict_eq` is applied with a
 model call and no validator pair, whether angle brackets are replaced before a
 prompt, how many `UserError`s are raised, whether errors carry a comparable
-prefix — and hands them to the model as a `<facts>` block it may not contradict.
+prefix - and hands them to the model as a `<facts>` block it may not contradict.
 
 Every fact is a count or a containment over bytes the network has **already
 agreed on**, so every validator reads a character-identical fact sheet. What is
@@ -112,7 +112,7 @@ published anchor.
 No fact is worth anything alone. `strict_eq` appears in careful contracts and
 careless ones alike. The rubric is what reads them.
 
-`contracts/test_helpers.py` asserts the sheet **separates the fixtures** — a
+`contracts/test_helpers.py` asserts the sheet **separates the fixtures** - a
 fact sheet that reads the same for a careful contract and a careless one has
 told the model nothing and the round is back to being a coin toss.
 
@@ -134,14 +134,14 @@ handed samples the model, not the contract.
 The four counted contract criteria come from `facts_mark`, a pure function of the
 agreed bytes. Every validator derives the identical score **and the identical
 reason**, without spending an inference, so they can never be the thing that
-splits a round. The reason still names the construct it scored on — that is what
+splits a round. The reason still names the construct it scored on - that is what
 the rubric asks of a reason, and a count cannot drift into advice.
 
 What stays with the jury is what a count cannot reach:
 
-- **`necessity`** — does this genuinely need many nodes agreeing, or would one
+- **`necessity`** - does this genuinely need many nodes agreeing, or would one
   deterministic call do? A question about intent, not text.
-- **all five site criteria** — reading a live page and deciding whether a claim
+- **all five site criteria** - reading a live page and deciding whether a claim
   outruns the contract behind it is irreducibly semantic. This is the part of the
   product GenLayer is *required* for, and it is fully judged.
 
@@ -153,8 +153,8 @@ at most one criterion may differ at all
 the band must be identical
 ```
 
-The band clause is the one that matters. A single point can cross a band edge —
-6 is `workable` and 7 is `strong` — so requiring the same band means every
+The band clause is the one that matters. A single point can cross a band edge -
+6 is `workable` and 7 is `strong` - so requiring the same band means every
 agreeing validator agrees on **the word beside the numeral**, not merely on
 numbers that happen to be close. It caught a wrong test case while being
 written, which is the sort of thing a clause earns its place by.
@@ -203,7 +203,7 @@ criterion"*. Under the tolerance that is no longer true, so `lib/copy.ts` reads:
 
 A string describing a rule the contract does not apply is the one kind of copy
 this product cannot carry. The count itself comes from `consensus_data.votes` on
-the receipt — a contract receives one aggregated bit per validator and can never
+the receipt - a contract receives one aggregated bit per validator and can never
 count its own jury, so a strip built from anything else would be decoration.
 
 ## Why the split table needs a second transaction
@@ -213,7 +213,7 @@ lets the contract learn *which* criterion split: the transaction ends
 Undetermined and nothing is written. Correct, and useless for improving the
 rubric.
 
-So `record_split` asks a different question, one the network *can* settle — not
+So `record_split` asks a different question, one the network *can* settle - not
 "what is the score" but "which anchor fails to separate two careful markers
 here". That is a property of the anchor and the source together, and validators
 agree on it far more readily than on the score it produces, which is exactly why
@@ -228,7 +228,7 @@ separates cleanly, nothing is recorded and the call says so.
 
 - **`gen_call` mis-encodes a view whose calldata runs past ~200 bytes**, and
   answers `RLP string ends with N superfluous bytes` where N tracks the argument
-  length. 128 bytes is fine, 256 is not — where an RLP length prefix stops
+  length. 128 bytes is fine, 256 is not - where an RLP length prefix stops
   fitting in one byte. So `gate(source)` works only for short input, chain-side
   gate parity is proven on small cases in `scripts/verify.mjs`, and parity on the
   real 5KB fixtures is proven against the same Python in `tests/parity`.
@@ -241,7 +241,7 @@ separates cleanly, nothing is recorded and the call says so.
   `re` and `json` are there too.
 - **A timed-out wait is not a failed transaction.** genlayer-js's
   `waitForTransactionReceipt` gives up long before a jury that rotates has
-  finished and throws `Timed out waiting … to reach status "ACCEPTED"`. The first
+  finished and throws `Timed out waiting ... to reach status "ACCEPTED"`. The first
   assay this project ever ran "timed out" that way and finalized twelve minutes
   later. Every wait here polls the node directly instead.
 - **Transactions are queued per account.** A rotating assay blocks the next
@@ -251,7 +251,7 @@ separates cleanly, nothing is recorded and the call says so.
 ## What the gate is, and what it is not
 
 Six presence checks, four required, every probe a plain case-sensitive
-substring. No regular expressions on either side — substring containment is the
+substring. No regular expressions on either side - substring containment is the
 one text operation that cannot drift between Python and JavaScript, and the
 browser runs this gate for free before any transaction exists.
 
@@ -267,7 +267,7 @@ Contract.
 
 The marked source is written by whoever wants a high mark, and `rubric()` and
 `gate_spec()` hand them the exact tag names used in the prompt. So `<` and `>`
-become `(` and `)` at the prompt boundary — replacement, not deletion, so
+become `(` and `)` at the prompt boundary - replacement, not deletion, so
 fencing cannot push a payload back under a cap just applied to it.
 
 Storage keeps the text verbatim. Only the prompt is fenced: a record's job is to
@@ -282,6 +282,6 @@ prompt.
 
 A mark has to be independently checkable or it is this page's opinion with a
 transaction attached. Validators must be able to reach the same source material,
-and text pasted into a browser is reachable by nobody — so pasting runs the gate
+and text pasted into a browser is reachable by nobody - so pasting runs the gate
 for free and says what is missing, and a URL is what gets marked. The `gen_call`
 argument limit rules out passing source text to the chain anyway.

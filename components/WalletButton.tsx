@@ -3,7 +3,7 @@
 /**
  * Connect Wallet, for the dApp header.
  *
- * The design draws a static chip reading `0x8f2c…41ab`. This is that chip when
+ * The design draws a static chip reading `0x8f2c...41ab`. This is that chip when
  * an account is connected, and the button that gets you there when it is not.
  *
  * Four states, because collapsing them is how a wallet button lies:

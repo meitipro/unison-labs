@@ -80,7 +80,7 @@ export default function SiteHeader({ current = "Story" }: { current?: string }) 
                 </a>
               ))}
             </nav>
-            <a className="launch" href="/app">
+            <a className="launch" href="/app/connect">
               Launch dApp
             </a>
           </>
@@ -141,7 +141,7 @@ export default function SiteHeader({ current = "Story" }: { current?: string }) 
             </div>
             <a
               className="btn"
-              href="/app"
+              href="/app/connect"
               style={{
                 marginTop: 14,
                 width: "100%",

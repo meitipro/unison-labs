@@ -1,7 +1,7 @@
 /**
  * Measure whether the marking round actually settles.
  *
- *   node scripts/settle.mjs --contract=0x… [--source=…] [--times=3]
+ *   node scripts/settle.mjs --contract=0x... [--source=...] [--times=3]
  *
  * The one question a rubric judged by a jury has to answer about itself. Five
  * independent 0/1/2 judgments matching EXACTLY is five coin flips, and the
@@ -24,7 +24,7 @@ const source = flag(
 );
 const site = flag("site", "");
 const times = Number(flag("times", "3"));
-if (!address) die("Pass --contract=0x…");
+if (!address) die("Pass --contract=0x...");
 
 const { client } = clientFor(requireKey("TOUCHSTONE_DEPLOYER_KEY"));
 const results = [];

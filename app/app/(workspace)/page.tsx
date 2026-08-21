@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
-import AppConsole from "../../components/AppConsole";
-import { getRubric } from "../../lib/touchstone";
+import AppConsole from "../../../components/AppConsole";
+import { getRubric } from "../../../lib/touchstone";
 
 export const metadata: Metadata = {
-  title: "New assay — Unison",
+  title: "New assay - Unison",
   description:
     "Paste an Intelligent Contract or give a raw file URL. The gate runs in your browser and costs nothing.",
 };
@@ -25,5 +25,5 @@ export default async function AppPage() {
   for (const subject of rubric?.subjects ?? []) {
     for (const criterion of subject.criteria) names[criterion.id] = criterion.name;
   }
-  return <AppConsole names={names} />;
+  return <AppConsole names={names} rubric={rubric?.version ?? ""} />;
 }

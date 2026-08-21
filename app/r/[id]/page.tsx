@@ -36,13 +36,13 @@ type Params = { params: { id: string } };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const id = Number(params.id);
   const report = Number.isFinite(id) ? await getReport(id) : null;
-  if (!report) return { title: "Report not found — Unison" };
+  if (!report) return { title: "Report not found - Unison" };
 
   const contract = report.subjects.find((s) => s.kind === "contract");
   const headline = contract ? `${fmt.score(contract.total)} ${contract.band}` : "report";
   return {
-    title: `Report ${report.id} · ${headline} — Unison`,
-    description: `${fmt.url(report.source_url)} · judged against rubric ${report.rubric} by the network's own validators.`,
+    title: `Report ${report.id} - ${headline} - Unison`,
+    description: `${fmt.url(report.source_url)} - judged against rubric ${report.rubric} by the network's own validators.`,
   };
 }
 
@@ -187,7 +187,7 @@ export default async function ReportPage({ params }: Params) {
             ) : (
               fmt.address(TOUCHSTONE)
             )}{" "}
-            <span className="dim">· {NETWORK_LABEL}</span>
+            <span className="dim"> - {NETWORK_LABEL}</span>
           </span>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default async function ReportPage({ params }: Params) {
         <a className="btn btn-quiet" href="/rubric">
           {copy.ACTION_READ_RUBRIC}
         </a>
-        <a className="btn btn-quiet" href="/app">
+        <a className="btn btn-quiet" href="/app/connect">
           Run another
         </a>
       </div>

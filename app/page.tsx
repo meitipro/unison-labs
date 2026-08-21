@@ -5,8 +5,8 @@
  * consensus, machinery, result, record, close, footer.
  *
  * WHERE THIS DEPARTS FROM THE DESIGN, and why. The mockup fills its result and
- * record panels with a sample — 9/10, report 8812, digest 4f2a91c0, contract
- * 0x71c3 — and climbs its counters to `4 min`, `96.4%` and `148,206`. All of
+ * record panels with a sample - 9/10, report 8812, digest 4f2a91c0, contract
+ * 0x71c3 - and climbs its counters to `4 min`, `96.4%` and `148,206`. All of
  * that is right in a design file and would be invented on a live page. Every
  * number here is read off the chain or is a figure the product can stand
  * behind, and the three states are kept apart: a real mark, an empty contract,
@@ -339,7 +339,7 @@ export default async function LandingPage() {
           <p className="lede" style={{ margin: 0, maxWidth: "44ch" }}>
             {copy.CLOSE_BODY}
           </p>
-          <a className="btn btn-glow" href="/app" style={{ fontSize: 14.5, padding: "14px 30px" }}>
+          <a className="btn btn-glow" href="/app/connect" style={{ fontSize: 14.5, padding: "14px 30px" }}>
             {copy.LAUNCH}
           </a>
         </div>
@@ -375,7 +375,7 @@ export default async function LandingPage() {
           <div>
             <div className="eyebrow">Assay</div>
             <div style={{ marginTop: 14, display: "grid", gap: 10, fontSize: 14 }}>
-              <a href="/app">Launch the dApp</a>
+              <a href="/app/connect">Launch the dApp</a>
               <a href="/#story">Story</a>
               <a href="/#record">Reports</a>
             </div>

@@ -146,7 +146,7 @@ test("the refusal sentence is built the way chapter five builds one", async () =
   const { refusalSentence } = await import("../../lib/gate.ts");
   const sentence = refusalSentence(runGate(fixture("plain.py")));
 
-  assert.match(sentence, /^Refused before scoring — missing header, nondet, agreement\./);
+  assert.match(sentence, /^Refused before scoring - missing header, nondet, agreement\./);
   assert.match(sentence, /no fee is charged and no validator spends inference on it\.$/);
   assert.ok(!sentence.includes("!"), "no exclamation marks anywhere in the product");
   assert.ok(!/\byou\b|\byour\b/i.test(sentence), "no sentence addresses the reader");

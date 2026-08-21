@@ -1,0 +1,1607 @@
+/*
+ * The workspace - the dApp's own surface, from `Unison Nocturne.dc.html`.
+ *
+ * The site is black and stays black. The workspace is the one place with two
+ * themes, because it is somewhere a person sits and works rather than a page
+ * they read once, and the design gives it a physical-looking switch to say so.
+ *
+ * HOW THE THEME IS APPLIED. The design carries its palette as an inline
+ * `appVars` string on the app container. Here it is a token layer keyed off
+ * `data-app-theme` on <html>, set before first paint by the boot script in
+ * `lib/prefs.ts`. Two reasons: an inline string cannot be read by a stylesheet,
+ * so every rule below would have to be inline too; and a preference restored in
+ * an effect paints the wrong theme first and then corrects itself, which is a
+ * white flash in the face of anyone who chose dark.
+ *
+ * FOUR CONTRAST CORRECTIONS, all measured against the ground each token is
+ * actually used on, all keeping the design's look:
+ *
+ *   --adim   dark  #5a5a5a -> #7d7d7d.  2.87:1 on the panel, and it labels the
+ *            stages of a review, which is text. Now 4.81.
+ *   --adim   light #9CA3AF -> #6B7280.  2.54:1 on white. Now 4.83.
+ *   --agold  light #C8951C -> #A87B12.  2.70:1 on white, and it is the fill of
+ *            5px status dots and 3px progress bars, which WCAG 1.4.11 wants at
+ *            3.0. Now 3.81. The dark theme keeps #C8951C, which is 7.32 there.
+ *   --astreak light the mark's gradient ends on #E0B551, which is 2.0:1 on a
+ *            near-white track. The light gradient runs #6E5109 -> #A87B12, all
+ *            of it above 3.8, and reads as the same gold at a glance.
+ *
+ * --ag (gold as TEXT) is #E0B551 on dark (10.27) and #8A6410 on light (5.37).
+ * Fill and text are separate tokens on purpose: one accent cannot do both jobs
+ * on both grounds, and this is the third dark mockup in a row where it tried.
+ */
+
+/* --------------------------------------------------------------------------
+   Motion this surface adds. The rest is already in globals.css.
+   -------------------------------------------------------------------------- */
+
+@keyframes dotsin {
+  from {
+    clip-path: circle(0% at 50% 46%);
+  }
+  to {
+    clip-path: circle(92% at 50% 46%);
+  }
+}
+
+@keyframes dotsout {
+  from {
+    clip-path: circle(92% at 50% 46%);
+  }
+  to {
+    clip-path: circle(0% at 50% 46%);
+  }
+}
+
+@keyframes railIn {
+  from {
+    opacity: 0.4;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes burstA {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(7);
+    opacity: 0;
+  }
+}
+
+@keyframes burstB {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(7);
+    opacity: 0;
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popin {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   The token layer
+   -------------------------------------------------------------------------- */
+
+:root,
+:root[data-app-theme="dark"] {
+  --ab: #000000;
+  --ap: #0a0a0b;
+  --al: rgba(255, 255, 255, 0.09);
+  --al2: rgba(255, 255, 255, 0.14);
+  --al3: rgba(255, 255, 255, 0.34);
+  --als: rgba(255, 255, 255, 0.06);
+  --ai: #ffffff;
+  --ai2: #d0d0d0;
+  --am: #8e8e8e;
+  --adim: #7d7d7d;
+  --aplaceholder: #8e8e8e;
+  --ag: #e0b551;
+  --agold: #c8951c;
+  --agl: rgba(200, 149, 28, 0.34);
+  --agf: rgba(200, 149, 28, 0.55);
+  --af: rgba(255, 255, 255, 0.05);
+  --af2: rgba(255, 255, 255, 0.08);
+  --abtn: #ffffff;
+  --abtnfg: #000000;
+  --amark: #ffffff;
+  --ashadow: rgba(0, 0, 0, 0.5);
+  --asplit: #120e0e;
+  --afail: #f87171;
+  --afail-line: rgba(248, 113, 113, 0.28);
+  --astreak: linear-gradient(92deg, #8a6410, #c8951c 45%, #e0b551 100%);
+
+  /* the switch, drawn as a physical object */
+  --tb: radial-gradient(ellipse at top left, #2b2724 0%, #141210 42%, #000000 100%);
+  --tsh: inset 4px 4px 10px rgba(0, 0, 0, 0.9), inset -4px -4px 10px rgba(140, 128, 104, 0.22),
+    inset 0 2px 4px rgba(0, 0, 0, 1), 0 2px 4px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.4);
+  --tbd: 1px solid rgba(255, 255, 255, 0.1);
+  --tgr: inset 0 2px 6px rgba(0, 0, 0, 0.9), inset 0 -1px 3px rgba(140, 128, 104, 0.24);
+  --thb: linear-gradient(145deg, #3b352d 0%, #26221c 55%, #161310 100%);
+  --thsh: inset 0 1px 1px rgba(255, 255, 255, 0.16), 0 5px 16px rgba(0, 0, 0, 0.7);
+  --thbd: 1px solid rgba(255, 255, 255, 0.16);
+  --thx: 36px;
+  --sunc: rgba(255, 255, 255, 0.32);
+  --moonc: #e0b551;
+  --burst: radial-gradient(circle, rgba(224, 181, 81, 0.65) 0%, rgba(224, 181, 81, 0) 70%);
+}
+
+:root[data-app-theme="light"] {
+  --ab: #f0f0ee;
+  --ap: #ffffff;
+  --al: rgba(17, 24, 39, 0.1);
+  --al2: rgba(17, 24, 39, 0.14);
+  --al3: rgba(17, 24, 39, 0.3);
+  --als: rgba(17, 24, 39, 0.07);
+  --ai: #111827;
+  --ai2: #374151;
+  --am: #5d6470;
+  --adim: #6b7280;
+  --aplaceholder: #5d6470;
+  --ag: #8a6410;
+  --agold: #a87b12;
+  --agl: rgba(138, 100, 16, 0.34);
+  --agf: rgba(138, 100, 16, 0.55);
+  --af: rgba(17, 24, 39, 0.05);
+  --af2: rgba(17, 24, 39, 0.09);
+  --abtn: #111827;
+  --abtnfg: #ffffff;
+  --amark: #111827;
+  --ashadow: rgba(17, 24, 39, 0.16);
+  --asplit: #fdf2f2;
+  --afail: #b91c1c;
+  --afail-line: rgba(185, 28, 28, 0.28);
+  --astreak: linear-gradient(92deg, #6e5109, #8a6410 45%, #a87b12 100%);
+
+  --tb: radial-gradient(ellipse at top left, #ffffff 0%, #f1f0ec 42%, #d9d6cd 100%);
+  --tsh: inset 4px 4px 10px rgba(150, 145, 130, 0.42), inset -4px -4px 10px rgba(255, 255, 255, 1),
+    inset 0 2px 4px rgba(150, 145, 130, 0.3), 0 2px 4px rgba(17, 24, 39, 0.1),
+    0 8px 16px rgba(17, 24, 39, 0.06);
+  --tbd: 1px solid rgba(17, 24, 39, 0.12);
+  --tgr: inset 0 2px 5px rgba(120, 115, 100, 0.34), inset 0 -1px 3px rgba(255, 255, 255, 0.9);
+  --thb: linear-gradient(145deg, #ffffff 0%, #fdfdfb 55%, #f2f1ec 100%);
+  --thsh: inset 0 1px 2px #ffffff, 0 5px 14px rgba(17, 24, 39, 0.18);
+  --thbd: 1px solid rgba(255, 255, 255, 0.95);
+  --thx: 0px;
+  --sunc: #8a6410;
+  --moonc: rgba(17, 24, 39, 0.34);
+  --burst: radial-gradient(circle, rgba(200, 149, 28, 0.7) 0%, rgba(200, 149, 28, 0) 70%);
+}
+
+/* --------------------------------------------------------------------------
+   Shell
+   -------------------------------------------------------------------------- */
+
+.ws {
+  min-height: 100vh;
+  background: var(--ab);
+  color: var(--ai);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  transition: background 420ms ease, color 420ms ease;
+}
+
+/*
+ * THE BREAKPOINT IS CSS, NOT JAVASCRIPT, and that is deliberate.
+ *
+ * The first version asked `matchMedia('(min-width: 900px)')` in an effect and
+ * kept the answer in state. It renders the rail closed on a 1280px viewport
+ * whenever the first measurement is taken before the surface has a width --
+ * a hidden tab, a restored window, a pane that has not composited yet -- and
+ * the `change` event that would correct it never fires, because from the media
+ * query's point of view nothing changed. A layout that depends on JavaScript
+ * having observed a resize is a layout that is sometimes simply wrong, and
+ * there is no state here that CSS cannot express.
+ *
+ * So: wide is the default, `@media (max-width: 899px)` makes it a sheet, and
+ * React owns exactly one bit -- whether that sheet is open.
+ */
+.ws-railbox {
+  display: flex;
+  flex: 0 0 var(--rail-w, 288px);
+  width: var(--rail-w, 288px);
+}
+
+.ws-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  border: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlayIn 240ms ease both;
+}
+
+.ws-burger {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .ws-railbox {
+    position: fixed;
+    z-index: 71;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    flex: none;
+    width: min(300px, 86vw);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.55);
+    animation: railIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .ws-railbox[data-open="false"] {
+    display: none;
+  }
+
+  .ws-scrim[data-open="true"] {
+    display: block;
+  }
+
+  .ws-handle {
+    display: none;
+  }
+
+  .ws-burger {
+    display: grid;
+  }
+}
+
+.ws-rail {
+  width: 100%;
+  min-height: 100vh;
+  overflow-y: auto;
+  background: var(--ap);
+  border-right: 1px solid var(--al);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  transition: background 420ms ease;
+}
+
+/* `min-width: 0` is load bearing. A flex item defaults to `min-width: auto`,
+   which refuses to shrink below its own min-content, so at 320px this column
+   stayed 336 wide and the whole page scrolled sideways. */
+.ws-main {
+  flex: 999 1 460px;
+  min-width: 0;
+  min-height: 100vh;
+  padding: clamp(24px, 3vw, 44px);
+}
+
+.ws-inner {
+  min-width: 0;
+}
+
+.ws-inner {
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+/* The drag handle. `col-resize` is one of the cursors the magnetic pointer
+   must not swallow, so it is exempted in the cursor rules below. */
+.ws-handle {
+  position: relative;
+  flex: 0 0 5px;
+  align-self: stretch;
+  border: 0;
+  padding: 0;
+  background: var(--al);
+  cursor: col-resize;
+  transition: background 200ms ease;
+  touch-action: none;
+}
+
+.ws-handle:hover,
+.ws-handle:focus-visible {
+  background: var(--agl);
+  outline: none;
+}
+
+.ws-handle[data-dragging="true"] {
+  background: var(--agf);
+}
+
+.ws-handle span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid var(--al2);
+  background: var(--ap);
+  pointer-events: none;
+}
+
+.ws-handle span i {
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--am);
+}
+
+.ws-handle span b {
+  display: grid;
+  gap: 2.5px;
+}
+
+/* --------------------------------------------------------------------------
+   Rail contents
+   -------------------------------------------------------------------------- */
+
+.ws-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ws-brand-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--amark);
+  box-shadow: 0 0 0 1px var(--al2), 0 6px 18px var(--ashadow);
+}
+
+.ws-brand-mark span {
+  width: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.ws-brand-mark i {
+  display: block;
+  width: 100%;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--agold);
+}
+
+.ws-brand-mark i:first-child,
+.ws-brand-mark i:last-child {
+  width: 62%;
+  background: #e0b551;
+}
+
+.ws-eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--am);
+}
+
+.ws-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--abtn);
+  color: var(--abtnfg);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--al2), 0 6px 18px var(--ashadow);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ws-new:hover {
+  transform: translateY(-1px);
+}
+
+.ws-nav {
+  margin-top: 10px;
+  display: grid;
+  gap: 2px;
+}
+
+.ws-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  padding: 9px 11px;
+  color: var(--am);
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.ws-nav a:hover {
+  background: var(--af);
+  color: var(--ai);
+}
+
+.ws-nav a[aria-current="page"] {
+  background: var(--af);
+  color: var(--ai);
+}
+
+.ws-nav svg {
+  flex-shrink: 0;
+}
+
+.ws-recent {
+  margin-top: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.ws-recent a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ai2);
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.ws-recent a:hover {
+  background: var(--als);
+  color: var(--ai);
+}
+
+.ws-recent a[aria-current="page"] {
+  background: var(--af);
+  color: var(--ai);
+}
+
+.ws-recent .tagpill {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ag);
+}
+
+.ws-foot {
+  margin-top: auto;
+  display: grid;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   The wallet card
+   -------------------------------------------------------------------------- */
+
+.ws-card {
+  border: 1px solid var(--al);
+  border-radius: 14px;
+  background: var(--af);
+  overflow: hidden;
+}
+
+.ws-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+}
+
+.ws-card-row + .ws-card-row {
+  border-top: 1px solid var(--als);
+}
+
+.ws-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #e0b551 0%, #c8951c 48%, #8a6410 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.ws-icon-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--al2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--am);
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.ws-icon-btn:hover {
+  border-color: var(--al3);
+  color: var(--ai);
+}
+
+.ws-icon-btn[data-done="true"] {
+  color: var(--ag);
+}
+
+.ws-gold-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--agl);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ag);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.ws-gold-btn:hover:not(:disabled) {
+  border-color: var(--agf);
+  background: var(--af);
+}
+
+.ws-gold-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* --------------------------------------------------------------------------
+   Header, panes, controls
+   -------------------------------------------------------------------------- */
+
+.ws-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ws-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1.08;
+  font-weight: 500;
+  letter-spacing: -0.032em;
+  color: var(--ai);
+}
+
+.ws-sub {
+  margin: 10px 0 0;
+  max-width: 54ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--am);
+}
+
+/* `display` for this lives with the breakpoint above, on purpose: declaring it
+   again here would win on source order and show the burger at every width. */
+.ws-burger {
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--al2);
+  border-radius: 12px;
+  background: var(--af);
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.ws-burger:hover {
+  border-color: var(--al3);
+}
+
+.ws-burger span {
+  width: 17px;
+  display: grid;
+  gap: 3.5px;
+}
+
+.ws-burger i {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ai);
+}
+
+.ws-chip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--am);
+  border: 1px solid var(--al2);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
+.ws-chip[data-gold="true"] {
+  color: var(--ag);
+  border-color: var(--agl);
+}
+
+.ws-panel {
+  margin-top: 26px;
+  background: var(--ap);
+  border: 1px solid var(--al);
+  border-radius: 18px;
+  padding: 22px;
+  transition: background 420ms ease, border-color 420ms ease;
+}
+
+.ws-panel[data-tone="gold"] {
+  border-color: var(--agl);
+  padding: 26px;
+}
+
+.ws-panel[data-tone="fail"] {
+  background: var(--asplit);
+  border-color: var(--afail-line);
+  padding: 26px;
+}
+
+.ws-cards {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 12px;
+}
+
+.ws-cards > div {
+  background: var(--ap);
+  border: 1px solid var(--al);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.ws-kicker {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ag);
+}
+
+.ws-note {
+  margin: 14px 0 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--am);
+}
+
+.ws-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--af);
+}
+
+.ws-seg button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--am);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.ws-seg button[aria-pressed="true"] {
+  background: var(--abtn);
+  color: var(--abtnfg);
+}
+
+.ws-field {
+  margin-top: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--ab);
+  border: 1px solid var(--al);
+  border-radius: 12px;
+  padding: 15px 16px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ai2);
+  outline: none;
+  transition: border-color 200ms ease, background 420ms ease;
+}
+
+textarea.ws-field {
+  min-height: 200px;
+  resize: vertical;
+  padding: 16px;
+}
+
+.ws-field:focus {
+  border-color: var(--agf);
+}
+
+.ws-field::placeholder {
+  color: var(--aplaceholder);
+}
+
+.ws-run {
+  border: 0;
+  border-radius: 999px;
+  background: var(--abtn);
+  color: var(--abtnfg);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 12px 26px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--al2), 0 6px 20px var(--ashadow);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background 200ms ease;
+}
+
+.ws-run:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ws-run:disabled {
+  background: var(--af2);
+  color: var(--adim);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ws-ghost {
+  border: 1px solid var(--al2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ai2);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.ws-ghost:hover {
+  border-color: var(--al3);
+  color: var(--ai);
+}
+
+.ws-quiet {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--am);
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.ws-quiet:hover {
+  color: var(--ai);
+}
+
+.ws-mono-quiet {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  white-space: nowrap;
+  color: var(--am);
+}
+
+/* the mark, drawn to length against reference stops at 4, 7 and 9 */
+.ws-streak {
+  position: relative;
+  margin-top: 20px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--af2);
+  overflow: hidden;
+}
+
+.ws-streak > div {
+  height: 100%;
+  background: var(--astreak);
+  transform-origin: left center;
+  animation: undraw 900ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+}
+
+.ws-streak > span {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+:root[data-app-theme="light"] .ws-streak > span {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ws-stops {
+  position: relative;
+  height: 16px;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--am);
+}
+
+.ws-stops span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.ws-rowlist {
+  margin-top: 12px;
+  display: grid;
+}
+
+.ws-rowlist > * {
+  border-top: 1px solid var(--als);
+}
+
+.ws-crit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 30px;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 0;
+}
+
+.ws-pips {
+  display: flex;
+  gap: 4px;
+}
+
+.ws-pips i {
+  display: block;
+  width: 16px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--af2);
+}
+
+.ws-pips i[data-on="true"] {
+  background: var(--agold);
+}
+
+.ws-kv {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--al);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px 24px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ai2);
+}
+
+.ws-kv > div {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 12px;
+}
+
+.ws-kv dt,
+.ws-kv > div > span:first-child {
+  color: var(--am);
+}
+
+.ws-kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ws-steps {
+  margin-top: 18px;
+  display: grid;
+}
+
+.ws-step {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 0;
+  border-top: 1px solid var(--als);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--adim);
+}
+
+.ws-step i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--al2);
+}
+
+.ws-step[data-at="done"] {
+  color: var(--am);
+}
+
+.ws-step[data-at="done"] i {
+  border-color: var(--agold);
+  background: var(--agold);
+}
+
+.ws-step[data-at="now"] {
+  color: var(--ag);
+}
+
+.ws-step[data-at="now"] i {
+  border-color: var(--agl);
+  border-top-color: var(--agold);
+  animation: unspin 800ms linear infinite;
+}
+
+.ws-list a,
+.ws-list > div {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 0;
+  border-top: 1px solid var(--als);
+  color: var(--ai);
+  transition: opacity 200ms ease;
+}
+
+.ws-list a:hover {
+  opacity: 0.68;
+  color: var(--ai);
+}
+
+.ws-pool {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+
+.ws-pool > div {
+  background: var(--ap);
+  border: 1px solid var(--al);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.ws-figs {
+  margin-top: 12px;
+  background: var(--ap);
+  border: 1px solid var(--al);
+  border-radius: 14px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 20px;
+}
+
+.ws-fig-n {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--ai);
+}
+
+.ws-fig-l {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--am);
+}
+
+.ws-set {
+  margin-top: 26px;
+  background: var(--ap);
+  border: 1px solid var(--al);
+  border-radius: 18px;
+  padding: 4px 22px;
+}
+
+.ws-set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 20px 0;
+}
+
+.ws-set-row + .ws-set-row {
+  border-top: 1px solid var(--als);
+}
+
+.ws-set-row h2 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ai);
+}
+
+.ws-set-row p {
+  margin: 4px 0 0;
+  max-width: 52ch;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--am);
+}
+
+.ws-live {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--agold);
+  animation: unblink 1800ms ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   The theme switch
+   -------------------------------------------------------------------------- */
+
+.ws-switch {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  width: 76px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 5px;
+  border: var(--tbd);
+  border-radius: 999px;
+  background: var(--tb);
+  box-shadow: var(--tsh);
+  cursor: pointer;
+  transition: background 420ms ease, box-shadow 420ms ease, border-color 420ms ease;
+}
+
+.ws-switch > .groove {
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  pointer-events: none;
+  box-shadow: var(--tgr);
+}
+
+.ws-switch > .faces {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 11px;
+  pointer-events: none;
+}
+
+.ws-switch > .knob {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: var(--thbd);
+  box-sizing: border-box;
+  background: var(--thb);
+  box-shadow: var(--thsh);
+  transform: translateX(var(--thx));
+  transition: transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1), background 420ms ease,
+    box-shadow 420ms ease;
+}
+
+.ws-switch > .knob > .sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.34) 0%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+}
+
+.ws-switch > .knob > .burst {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--burst);
+}
+
+.ws-switch > .knob > svg {
+  position: relative;
+  z-index: 2;
+}
+
+.ws-switch:focus-visible {
+  outline: 2px solid var(--agf);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Toast
+   -------------------------------------------------------------------------- */
+
+.ws-toasts {
+  position: fixed;
+  z-index: 80;
+  right: clamp(16px, 3vw, 32px);
+  bottom: clamp(16px, 3vw, 32px);
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  pointer-events: none;
+}
+
+.ws-toast {
+  max-width: 320px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--agl);
+  border-radius: 14px;
+  background: var(--ap);
+  box-shadow: 0 18px 44px var(--ashadow);
+  padding: 15px 17px;
+  animation: toastIn 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ws-toast[data-tone="fail"] {
+  border-color: var(--afail-line);
+}
+
+.ws-toast-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--agold);
+  color: #1a1204;
+}
+
+.ws-toast[data-tone="fail"] .ws-toast-icon {
+  background: var(--afail);
+  color: #ffffff;
+}
+
+.ws-toast-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ws-toast-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ai);
+}
+
+.ws-toast-meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--am);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+   The connect screen
+   -------------------------------------------------------------------------- */
+
+.auth {
+  position: relative;
+  min-height: 100vh;
+  background: #000000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-dots,
+.auth-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-dots[data-layer="white"] {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.42) 1.5px, transparent 1.6px);
+  background-size: 22px 22px;
+  animation: dotsin 2600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-dots[data-layer="gold"] {
+  background-image: radial-gradient(circle, rgba(200, 149, 28, 0.55) 1.8px, transparent 1.9px);
+  background-size: 66px 66px;
+  animation: dotsin 2800ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+}
+
+.auth[data-step="ready"] .auth-dots[data-layer="white"] {
+  animation: dotsout 1500ms cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+
+.auth[data-step="ready"] .auth-dots[data-layer="gold"] {
+  animation: dotsout 1300ms cubic-bezier(0.6, 0, 0.2, 1) 120ms both;
+}
+
+.auth-veil {
+  z-index: 1;
+}
+
+.auth-veil[data-layer="radial"] {
+  background: radial-gradient(
+    circle at 50% 46%,
+    rgba(0, 0, 0, 0.94) 0%,
+    rgba(0, 0, 0, 0.72) 28%,
+    rgba(0, 0, 0, 0.1) 62%,
+    rgba(0, 0, 0, 0.86) 100%
+  );
+}
+
+.auth-veil[data-layer="linear"] {
+  background: linear-gradient(
+    180deg,
+    #000000 0%,
+    rgba(0, 0, 0, 0.2) 26%,
+    rgba(0, 0, 0, 0.2) 70%,
+    #000000 100%
+  );
+}
+
+.auth-top {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  padding: 24px 20px 0;
+  animation: slideDown 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-pill {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 10px 16px 10px 12px;
+  border: 1px solid #333333;
+  border-radius: 999px;
+  background: rgba(31, 31, 31, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.auth-body {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px 40px;
+  text-align: center;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-h {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1.12;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+  animation: reveal 800ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+}
+
+.auth-p {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #a8a8a8;
+  animation: reveal 800ms cubic-bezier(0.22, 1, 0.36, 1) 320ms both;
+}
+
+.auth-actions {
+  margin-top: 30px;
+  display: grid;
+  gap: 12px;
+  animation: reveal 800ms cubic-bezier(0.22, 1, 0.36, 1) 440ms both;
+}
+
+.auth-primary {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 14px 24px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 24px rgba(255, 255, 255, 0.3),
+    0 0 48px rgba(255, 255, 255, 0.12);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-primary:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01);
+}
+
+.auth-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--dim);
+}
+
+.auth-or span {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-wallets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: 8px;
+}
+
+.auth-wallets button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 11px 10px;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  transition: border-color 200ms ease, color 200ms ease, background 200ms ease;
+}
+
+.auth-wallets button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.34);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-wallets button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auth-wallets img {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex: none;
+}
+
+.auth-fine {
+  margin: 34px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--dim);
+  animation: reveal 800ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both;
+}
+
+.auth-ring {
+  margin: 40px auto 0;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 2px solid rgba(200, 149, 28, 0.22);
+  border-top-color: var(--gold);
+  animation: unspin 900ms linear infinite;
+}
+
+.auth-tick {
+  margin: 40px auto 0;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  animation: popin 600ms cubic-bezier(0.22, 1, 0.36, 1) 500ms both;
+}
+
+.auth-status {
+  margin-top: 34px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-lt);
+}
+
+/* --------------------------------------------------------------------------
+   The magnetic pointer
+   --------------------------------------------------------------------------
+
+   The design hides the native cursor whenever the custom one is drawn. That is
+   only safe where the custom one is actually being drawn, so the switch is
+   `data-magcursor` on <body>, which the component sets only after it has run
+   its own guards (fine pointer, no touch, motion not reduced, and the person
+   has not turned it off in Settings). Text fields and the rail's resize handle
+   keep their real cursors, because the shape IS the affordance there.
+   -------------------------------------------------------------------------- */
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-magcursor],
+  body[data-magcursor] * {
+    cursor: none;
+  }
+
+  body[data-magcursor] input,
+  body[data-magcursor] textarea,
+  body[data-magcursor] [contenteditable] {
+    cursor: text;
+  }
+
+  /* The dot hides over a select, so without this there is nothing at all. */
+  body[data-magcursor] select {
+    cursor: default;
+  }
+
+  body[data-magcursor] .ws-handle {
+    cursor: col-resize;
+  }
+
+  body[data-magcursor] :disabled {
+    cursor: not-allowed;
+  }
+}
+
+.magdot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 999px;
+  background: #ffffff;
+  mix-blend-mode: exclusion;
+  backdrop-filter: contrast(1.45);
+  -webkit-backdrop-filter: contrast(1.45);
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 620px) {
+  .ws-crit {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 14px;
+  }
+  .ws-list a,
+  .ws-list > div {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 6px 12px;
+  }
+  .ws-kv > div {
+    grid-template-columns: 68px 1fr;
+  }
+}

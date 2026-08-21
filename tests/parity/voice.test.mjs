@@ -74,12 +74,34 @@ test("a wall of text is replaced rather than truncated mid-thought", () => {
 /**
  * Placeholders that are CODE, not prose.
  *
- * `...` is a real Python literal and `gl.Contract` is a real base class, so the
- * typographic rules do not reach inside them. Named explicitly rather than
- * pattern-matched, so adding a third one is a decision somebody makes on
+ * `gl.Contract` is a real base class and `from genlayer import *` a real
+ * import, so nothing typographic reaches inside them. Named explicitly rather
+ * than pattern-matched, so adding a third one is a decision somebody makes on
  * purpose instead of a rule quietly widening.
  */
 const CODE_SAMPLES = new Set(["APP_PASTE_PLACEHOLDER", "PLACEHOLDER_PASTE"]);
+
+/**
+ * The nine characters house style bans outright.
+ *
+ * Built from escape sequences, never written literally: spelled out, this file
+ * would contain every character it bans and `scripts/check.mjs` would report
+ * the very test that enforces the rule.
+ *
+ * NOTE THE DIRECTION. The connector is a spaced hyphen and the ellipsis is
+ * three periods, so `...` is CORRECT and U+2026 is not. This test asserted the
+ * opposite until the rule was set, which is why `scripts/check.mjs` exists:
+ * a convention nothing enforces drifts back within one session.
+ */
+const BANNED = new RegExp(
+  "[\\u2014\\u2013\\u2010\\u2012\\u2015\\u2212\\u00b7\\u2022\\u2026]",
+);
+
+function bannedIn(value) {
+  const found = value.match(BANNED);
+  if (!found) return "";
+  return `U+${found[0].codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`;
+}
 
 test("the copy deck itself obeys the voice rules it sets", () => {
   const strings = Object.entries(copy).filter(([, v]) => typeof v === "string");
@@ -89,9 +111,38 @@ test("the copy deck itself obeys the voice rules it sets", () => {
     assert.ok(!value.includes("!"), `${key} contains an exclamation mark`);
     assert.ok(!/\b(sorry|oops|unfortunately)/i.test(value), `${key} apologises`);
     if (CODE_SAMPLES.has(key)) continue;
-    // The ellipsis is ONE character and only ever inside a hash or a url.
-    assert.ok(!value.includes("..."), `${key} uses three periods rather than an ellipsis`);
+    const bad = bannedIn(value);
+    assert.ok(
+      !bad,
+      `${key} uses ${bad}. The connector is a spaced hyphen, the ellipsis three periods.`,
+    );
   }
+});
+
+test("every string in the deck obeys the rule, arrays and objects included", () => {
+  /* HOW_CARDS and RUN_STAGES are an array of objects and an array of strings,
+     and the loop above only reaches bare top-level strings. A rule half the
+     deck is exempt from is not a rule. */
+  let checked = 0;
+  const walk = (value, path) => {
+    if (typeof value === "string") {
+      checked += 1;
+      const bad = bannedIn(value);
+      assert.ok(!bad, `${path} uses ${bad}: ${value}`);
+      assert.ok(!value.includes("!"), `${path} contains an exclamation mark`);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => walk(entry, `${path}[${index}]`));
+    } else if (value && typeof value === "object") {
+      for (const [key, entry] of Object.entries(value)) walk(entry, `${path}.${key}`);
+    }
+  };
+  for (const [key, value] of Object.entries(copy)) {
+    if (CODE_SAMPLES.has(key) || typeof value === "function") continue;
+    walk(value, key);
+  }
+  assert.ok(checked > 40, `expected the whole deck to be walked, saw ${checked}`);
 });
 
 test("every code sample really is code", () => {
@@ -105,7 +156,7 @@ test("every code sample really is code", () => {
 test("the refusal is built from the three parts chapter five allows", () => {
   const refused = copy.refused("header, nondet, agreement");
   assert.match(refused, /^Refused before scoring/, "what happened, past tense, no subject pronoun");
-  assert.match(refused, /— missing header, nondet, agreement\./, "which part, after an em dash");
+  assert.match(refused, / - missing header, nondet, agreement\./, "which part, after the connector");
   assert.match(refused, /no fee is charged and no validator spends inference on it\.$/, "what follows");
   assertVoice(refused, "the refusal");
 });

@@ -5,7 +5,7 @@
  * and Record.
  *
  * The design draws four buttons that swap a block. Built here as a real tablist
- * — roving `aria-selected`, arrow keys, `role="tabpanel"` — because four
+ * - roving `aria-selected`, arrow keys, `role="tabpanel"` - because four
  * unlabelled buttons that change content elsewhere on the page are unusable
  * without it, and it costs nothing.
  *

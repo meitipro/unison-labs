@@ -12,7 +12,7 @@
  *   be misread as a score out of five.
  */
 
-const ELLIPSIS = "…";
+const ELLIPSIS = "...";
 
 /** A score. Numeral, slash, no spaces. Never "nine out of ten". */
 export function score(total: number, outOf = 10): string {
@@ -83,7 +83,7 @@ export function reportDate(iso: string): string {
 
 /** The middle dot, with a space either side. The only separator in the product. */
 export function joinMono(parts: Array<string | number | null | undefined>): string {
-  return parts.filter((p) => p !== null && p !== undefined && p !== "").join(" · ");
+  return parts.filter((p) => p !== null && p !== undefined && p !== "").join(" - ");
 }
 
 /** A list of criterion ids, in the product's voice: lowercase, comma separated. */

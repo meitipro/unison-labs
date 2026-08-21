@@ -4,7 +4,7 @@
  *   node scripts/tx.mjs 0x<hash>
  *
  * Exists because genlayer-js's waitForTransactionReceipt gives up long before a
- * jury has finished, and the error it throws ("Timed out waiting … to reach
+ * jury has finished, and the error it throws ("Timed out waiting ... to reach
  * status ACCEPTED") reads exactly like a failed transaction while the thing is
  * still settling on a validator.
  *

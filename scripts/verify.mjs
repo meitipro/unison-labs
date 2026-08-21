@@ -115,7 +115,7 @@ const GATE_CASES = [
 
 async function main() {
   const address = getAddress(flag("contract", process.env.NEXT_PUBLIC_TOUCHSTONE_ADDRESS || ""));
-  if (!address) die("Pass --contract=0x… or set NEXT_PUBLIC_TOUCHSTONE_ADDRESS.");
+  if (!address) die("Pass --contract=0x... or set NEXT_PUBLIC_TOUCHSTONE_ADDRESS.");
   const key = requireKey("TOUCHSTONE_DEPLOYER_KEY");
   const { chain, account, client } = clientFor(key);
 
@@ -257,7 +257,7 @@ async function main() {
       if (found) {
         const report = JSON.parse(found);
         reportId = report.id;
-        console.log(`\n         report ${report.id}   digest ${report.digest.slice(0, 12)}…`);
+        console.log(`\n         report ${report.id}   digest ${report.digest.slice(0, 12)}...`);
         console.log(`         gate ${report.gate.passed} of ${report.gate.total}`);
         for (const subject of report.subjects) {
           console.log(

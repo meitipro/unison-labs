@@ -15,10 +15,13 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 
+import MagneticCursor from "../components/MagneticCursor";
+import { PREFS_BOOT, PrefsProvider } from "../lib/prefs";
 import { WalletProvider } from "../lib/wallet";
 import * as copy from "../lib/copy";
 
 import "./globals.css";
+import "./workspace.css";
 
 /** Inter. Everything read in sentences. */
 const sans = localFont({
@@ -62,10 +65,27 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${display.variable} ${mono.variable}`}
+      /* PREFS_BOOT sets data-app-theme on this element before React sees it, so
+         the server's markup and the browser's first paint disagree by design.
+         Without this the console carries a hydration warning on every load for
+         anyone who chose light. */
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Applies the stored theme and pointer preference before first paint.
+            Restoring either in an effect paints the default first and corrects
+            itself a frame later, which is a white flash for anyone on dark. */}
+        <script dangerouslySetInnerHTML={{ __html: PREFS_BOOT }} />
+      </head>
       <body>
         <div className="grain" aria-hidden="true" />
-        <WalletProvider>{children}</WalletProvider>
+        <PrefsProvider>
+          <MagneticCursor />
+          <WalletProvider>{children}</WalletProvider>
+        </PrefsProvider>
       </body>
     </html>
   );

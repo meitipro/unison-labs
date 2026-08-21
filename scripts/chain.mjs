@@ -73,7 +73,7 @@ export async function deployWithRetry(client, code, args, attempts = 20) {
         // Studio is rate limited to roughly 30 requests a minute and answers a
         // burst with "unknown RPC error" or a dropped socket rather than a 429,
         // so the backoff has to be long enough to actually leave the window.
-        console.log(`    attempt ${i} dropped before consensus, nothing spent - retrying…`);
+        console.log(`    attempt ${i} dropped before consensus, nothing spent - retrying...`);
         await sleep(Math.min(4000 * i, 20000));
         continue;
       }
@@ -93,7 +93,7 @@ export async function writeWithRetry(client, call, attempts = 5) {
           message,
         );
       if (retryable && i < attempts) {
-        console.log(`    attempt ${i} dropped before submission, retrying…`);
+        console.log(`    attempt ${i} dropped before submission, retrying...`);
         await sleep(2500 * i);
         continue;
       }
@@ -127,7 +127,7 @@ export function refusalOf(receipt) {
   if (typeof raw === "string") {
     try {
       candidates.push(
-        Buffer.from(raw, "base64").toString("utf8").replace(/[^\x20-\x7e—]+/g, " ").trim(),
+        Buffer.from(raw, "base64").toString("utf8").replace(/[^\x20-\x7e - ]+/g, " ").trim(),
       );
     } catch {
       /* not base64; nothing lost */
@@ -176,7 +176,7 @@ async function pollTx(hash) {
  * NOT `client.waitForTransactionReceipt`. That helper gives up long before a
  * marking round that rotates has finished, and throws
  *
- *     Timed out waiting for transaction 0x… to reach status "ACCEPTED"
+ *     Timed out waiting for transaction 0x... to reach status "ACCEPTED"
  *
  * which reads exactly like a failed transaction. It is not one: the first assay
  * this project ever ran "timed out" that way and then finalized twelve minutes

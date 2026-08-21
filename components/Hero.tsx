@@ -5,14 +5,14 @@
  *
  * THE COUNTERS ARE THE ONE PLACE THIS DEPARTS FROM THE DESIGN, and it is the
  * same departure as everywhere else. The mockup climbs to `4 min`, `96.4%`,
- * `1001` and `148,206` — right for a design file, and three of those are
+ * `1001` and `148,206` - right for a design file, and three of those are
  * numbers this product has never measured. A landing page that opens with an
  * invented statistic is exactly the thing the rest of the product refuses to
  * do.
  *
  * So the animation is the design's and every number is one that can be stood
  * behind: what the contract has issued, what the rubric publishes, what a
- * refusal costs, and the validator set size — which is GenLayer's own published
+ * refusal costs, and the validator set size - which is GenLayer's own published
  * figure, labelled as the network's rather than as ours.
  *
  * A number the page cannot read shows an em dash rather than a zero. Zero is a
@@ -40,7 +40,7 @@ export type Counter = {
  * THE STATE STARTS AT THE TARGET, not at zero, and that is the important part.
  * `requestAnimationFrame` does not run in a background tab, so a counter that
  * starts at 0 and climbs on rAF shows a visitor who opened the page in another
- * tab "0 Published criteria" — a wrong number, presented as a measurement, for
+ * tab "0 Published criteria" - a wrong number, presented as a measurement, for
  * as long as they leave it there. It is also what the server renders.
  *
  * So the truth is the default and the animation is the decoration: the effect
@@ -72,7 +72,7 @@ function useClimb(target: number | null, delay: number, duration: number) {
       raf.current = requestAnimationFrame(step);
     }, delay);
 
-    // If the frames never came — a background tab, a throttled renderer — land
+    // If the frames never came - a background tab, a throttled renderer - land
     // on the real number rather than sitting at zero.
     const safety = setTimeout(() => {
       if (!done) setValue(target);
@@ -91,7 +91,7 @@ function useClimb(target: number | null, delay: number, duration: number) {
 function Stat({ counter, index }: { counter: Counter; index: number }) {
   const value = useClimb(counter.value, 480 + index * 90, 1500 + index * 80);
   const shown =
-    counter.value === null ? "—" : `${Math.round(value).toLocaleString("en-US")}${counter.suffix ?? ""}`;
+    counter.value === null ? "-" : `${Math.round(value).toLocaleString("en-US")}${counter.suffix ?? ""}`;
 
   return (
     <div className="reveal" style={{ animationDelay: `${500 + index * 80}ms` }}>
@@ -273,7 +273,7 @@ export default function Hero({ counters }: { counters: Counter[] }) {
 
           <a
             className="btn btn-glow"
-            href="/app"
+            href="/app/connect"
             style={{ animation: "revealPulse 850ms cubic-bezier(.22,1,.36,1) 400ms both" }}
           >
             {copy.LAUNCH}

@@ -20,6 +20,7 @@ import { createClient } from "genlayer-js";
 import type { Hash } from "genlayer-js/types";
 
 import { CHAIN, RPC_URL, TOUCHSTONE } from "./chain";
+import type { Eip1193Provider as EthereumProvider } from "./eip6963";
 
 // Pure text, kept apart so its rules can be tested without an RPC client.
 export { readableError } from "./voice";
@@ -122,10 +123,44 @@ function fromBase64(value: string): string {
  * The contract's own sentence, dug out of a failed leader receipt.
  *
  * Worth the effort because a UserError message here is the one part of a failure
- * written for a person to read: "refused before scoring — missing header,
+ * written for a person to read: "refused before scoring - missing header,
  * nondet, agreement" rather than a revert code. The receipt puts it in a
  * different shape depending on the outcome, so all of them are tried.
  */
+/**
+ * A refusal off the chain, in the product's typography.
+ *
+ * TWO SEPARATE JOBS, and they used to be one broken regex.
+ *
+ * The first is stripping the control bytes and stray high codepoints a receipt
+ * carries around its message, keeping printable ASCII.
+ *
+ * The second is the connector. The DEPLOYED contract builds its refusal with an
+ * em dash -- `refused before scoring [em dash] missing header, nondet` -- and
+ * that string is frozen: it is inside the bytes at
+ * 0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4, editing the source would put
+ * `npm run match` out of agreement with the live contract, and a redeploy for a
+ * dash would strand every report already filed under that address. So the
+ * chain says what it says and this converts it on the way to the screen, which
+ * is what `lib/voice.ts` exists for anyway. Worth folding into the contract at
+ * the next deploy that happens for a real reason.
+ *
+ * The nine codepoints are written as escapes, not literally, so this file does
+ * not trip `scripts/check.mjs`.
+ */
+const BANNED_CHARS = new RegExp("[\\u2014\\u2013\\u2010\\u2012\\u2015\\u2212]", "g");
+
+export function houseStyle(text: string): string {
+  return text
+    .replace(BANNED_CHARS, " - ")
+    .replace(new RegExp("[\\u00b7\\u2022]", "g"), " - ")
+    .replace(new RegExp("\\u2026", "g"), "...")
+    // Anything left that is not printable ASCII is receipt framing, not words.
+    .replace(/[^\x20-\x7e]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function refusalOf(tx: Tx | null): string {
   const leader = leaderOf(tx);
   if (!leader) return "";
@@ -133,13 +168,7 @@ export function refusalOf(tx: Tx | null): string {
   const raw = leader.result;
 
   if (typeof raw === "string") {
-    candidates.push(
-      fromBase64(raw)
-        // Keep the em dash: it is how the product builds a refusal, and
-        // stripping it to ascii would break the sentence in the middle.
-        .replace(/[^\x20-\x7e—·]+/g, " ")
-        .trim(),
-    );
+    candidates.push(houseStyle(fromBase64(raw)));
   } else if (raw && typeof raw === "object") {
     const payload = (raw as Record<string, unknown>).payload;
     if (typeof payload === "string") candidates.push(payload);
@@ -155,8 +184,10 @@ export function refusalOf(tx: Tx | null): string {
   for (const candidate of candidates) {
     // The prefixes are for validators, not for people, so they come off.
     const hit = /\[(?:EXPECTED|EXTERNAL|TRANSIENT|LLM_ERROR)\]\s*([^"\n]+)/.exec(candidate);
-    if (hit) return hit[1].trim();
-    if (candidate && candidate.length < 500) return candidate.trim();
+    // Every branch goes through houseStyle, not just the base64 one: the
+    // payload and stderr shapes carry the same contract-authored sentence.
+    if (hit) return houseStyle(hit[1]);
+    if (candidate && candidate.length < 500) return houseStyle(candidate);
   }
   return "";
 }
@@ -165,7 +196,7 @@ export function refusalOf(tx: Tx | null): string {
  * Follow one transaction to a settled state.
  *
  * NOT `client.waitForTransactionReceipt`. That helper gives up long before a
- * jury that rotates has finished and throws "Timed out waiting … to reach
+ * jury that rotates has finished and throws "Timed out waiting ... to reach
  * status ACCEPTED", which would tell somebody their submission failed while it
  * was still being marked.
  */
@@ -195,11 +226,20 @@ async function follow(
 
 /**
  * Handing createClient a bare address rather than a key puts genlayer-js in
- * browser-wallet mode: it routes eth_sendTransaction through window.ethereum,
- * so the visitor signs in their own wallet and no key ever reaches this app.
+ * browser-wallet mode: the visitor signs in their own wallet and no key ever
+ * reaches this app.
+ *
+ * THE PROVIDER IS PASSED IN RATHER THAN LOOKED UP. Left to itself genlayer-js
+ * signs through `window.ethereum`, which is only one of the wallets a browser
+ * may have. With two installed, the one that lost the race to set that global
+ * is still offered on the connect screen -- so somebody could pick wallet A,
+ * see wallet A's address on every screen, and then have wallet B open asking
+ * for the signature. The provider chosen at connect time is carried all the
+ * way here, and `window.ethereum` is only the fallback for older extensions
+ * that never announced themselves.
  */
-function wallet(account: `0x${string}`) {
-  return createClient({ chain: CHAIN, account });
+function wallet(account: `0x${string}`, provider?: EthereumProvider) {
+  return createClient({ chain: CHAIN, account, ...(provider ? { provider } : {}) });
 }
 
 const RETRYABLE =
@@ -209,9 +249,10 @@ async function send(
   account: `0x${string}`,
   functionName: string,
   args: unknown[],
+  provider?: EthereumProvider,
   attempts = 4,
 ): Promise<Hash> {
-  const client = wallet(account);
+  const client = wallet(account, provider);
   for (let i = 1; i <= attempts; i += 1) {
     try {
       return await client.writeContract({
@@ -248,9 +289,10 @@ export async function assay(
   sourceUrl: string,
   siteUrl: string,
   onStage: (stage: Stage) => void,
+  provider?: EthereumProvider,
 ): Promise<Outcome> {
   onStage("sending");
-  const hash = await send(account, "assay", [sourceUrl, siteUrl]);
+  const hash = await send(account, "assay", [sourceUrl, siteUrl], provider);
   onStage("sent");
   onStage("fetching");
 
@@ -321,9 +363,10 @@ export async function recordSplit(
   account: `0x${string}`,
   sourceUrl: string,
   onStage: (stage: Stage) => void,
+  provider?: EthereumProvider,
 ): Promise<{ hash: string; criterion: string; why: string }> {
   onStage("sending");
-  const hash = await send(account, "record_split", [sourceUrl]);
+  const hash = await send(account, "record_split", [sourceUrl], provider);
   onStage("sent");
   const { tx } = await follow(hash, onStage);
   const leader = leaderOf(tx);
@@ -348,9 +391,10 @@ export async function contest(
   reportId: number,
   criterion: string,
   onStage: (stage: Stage) => void,
+  provider?: EthereumProvider,
 ): Promise<{ hash: string; why: string }> {
   onStage("sending");
-  const hash = await send(account, "contest", [reportId, criterion]);
+  const hash = await send(account, "contest", [reportId, criterion], provider);
   onStage("sent");
   const { tx } = await follow(hash, onStage);
   const leader = leaderOf(tx);

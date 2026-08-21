@@ -53,7 +53,7 @@ async function main() {
     die("The runner is pinned to a local-only alias. Networks reject those.");
   }
 
-  console.log("\n  checking the pure half before spending anything…");
+  console.log("\n  checking the pure half before spending anything...");
   try {
     execFileSync(python(), [join(ROOT, "contracts", "test_helpers.py")], {
       stdio: "inherit",
@@ -82,7 +82,7 @@ async function main() {
     if (answer.trim().toLowerCase() !== "yes") die("Nothing was deployed.");
   }
 
-  console.log("\n  deploying…");
+  console.log("\n  deploying...");
   const hash = await deployWithRetry(client, code, []);
   console.log(`  tx           ${hash}`);
 

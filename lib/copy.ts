@@ -21,7 +21,7 @@
  * the one kind of copy this product cannot carry.
  */
 
-export const PAGE_TITLE = "One Contract, One Agreed Number — Unison";
+export const PAGE_TITLE = "One Contract, One Agreed Number - Unison";
 
 export const META_DESCRIPTION =
   "Score a GenLayer contract out of ten against a published rubric, judged by the network's own validators.";
@@ -141,9 +141,9 @@ export const FIELD_SOURCE_QUALIFIER = "raw file URL";
 export const FIELD_SITE = "Site";
 export const FIELD_SITE_QUALIFIER = "optional, scored separately";
 
-export const PLACEHOLDER_SOURCE = "https://raw.githubusercontent.com/…/contract.py";
+export const PLACEHOLDER_SOURCE = "https://raw.githubusercontent.com/.../contract.py";
 export const PLACEHOLDER_SITE = "https://yourproduct.xyz";
-export const PLACEHOLDER_PASTE = "# { \"Depends\": \"py-genlayer:…\" }\nfrom genlayer import *";
+export const PLACEHOLDER_PASTE = "# { \"Depends\": \"py-genlayer:...\" }\nfrom genlayer import *";
 
 export const SWAP_TO_PASTE = "paste the source instead";
 export const SWAP_TO_URL = "use a URL instead";
@@ -157,17 +157,17 @@ export const SAMPLES: Array<{ label: string; file: string }> = [
   { label: "one that isn't an Intelligent Contract", file: "plain.py" },
 ];
 
-export const GATE_EYEBROW = "Step one · runs in your browser, free";
+export const GATE_EYEBROW = "Step one - runs in your browser, free";
 export const GATE_HEADING = "The gate";
 export const GATE_NOTE =
-  "Presence checks only. Passing them proves almost nothing — anyone can type gl.nondet into a comment. Failing a required one proves a great deal, and it stops the contract spending a validator's inference on something that isn't an Intelligent Contract.";
+  "Presence checks only. Passing them proves almost nothing - anyone can type gl.nondet into a comment. Failing a required one proves a great deal, and it stops the contract spending a validator's inference on something that isn't an Intelligent Contract.";
 
 export const ELIGIBLE =
   "Eligible. Passing the gate says only that this is an Intelligent Contract, not that it is a good one. The score below is the part that matters.";
 
 /** {ids} is the comma separated list of missing required checks. */
 export function refused(ids: string): string {
-  return `Refused before scoring — missing ${ids}. This is not an Intelligent Contract, so no fee is charged and no validator spends inference on it.`;
+  return `Refused before scoring - missing ${ids}. This is not an Intelligent Contract, so no fee is charged and no validator spends inference on it.`;
 }
 
 export const EMPTY_SUBMIT = "Give it a raw source URL, or paste the source. Nothing else is needed.";
@@ -175,7 +175,7 @@ export const EMPTY_SUBMIT = "Give it a raw source URL, or paste the source. Noth
 export const STAGE_FETCHING = "validators are fetching the source";
 export const STAGE_SCORING = "scoring against the rubric on every node";
 
-export const RESULT_EYEBROW = "Step two · judged by the adjudication layer";
+export const RESULT_EYEBROW = "Step two - judged by the adjudication layer";
 export const RESULT_HEADING = "The streak";
 export const RESULT_NOTE =
   "Each criterion scores 0, 1 or 2 against a published anchor. The total is summed in the contract, never proposed by a model, and the band comes from the total by a pure function.";
@@ -213,10 +213,10 @@ export const NODES_DISAGREED_UNNAMED =
   "The validators did not agree, so no report was issued and the fee was returned. That means an anchor is written badly, which is our problem rather than yours.";
 
 export const PROVISIONAL =
-  "Accepted, provisional — the marks exist, the report is permanent after finality.";
+  "Accepted, provisional - the marks exist, the report is permanent after finality.";
 
 export function finalized(id: number): string {
-  return `Finalized · report ${id}`;
+  return `Finalized - report ${id}`;
 }
 
 export function contested(criterion: string): string {
@@ -279,3 +279,116 @@ export function charCount(n: number): string {
 
 export const APP_WALLET_NEEDED =
   "Connect a wallet to submit. The gate above already ran here, free.";
+
+/* -------------------------------------------------------------------------
+   The workspace: the connect screen, and the four panes
+   ------------------------------------------------------------------------- */
+
+export const CONNECT_TITLE = "Connect Your Wallet";
+export const CONNECT_LEDE =
+  "Every report is requested by a wallet and recorded against it, so the record says who asked.";
+export const CONNECT_PICK = "or pick one";
+export const CONNECT_SKIP = "Read a finalized report without connecting";
+
+/**
+ * Why connecting is safe, and what it is not.
+ *
+ * The design writes "connecting signs a message, never a transaction". That is
+ * not what happens here: `eth_requestAccounts` signs NOTHING at all, and the
+ * only signature this product ever asks for is the review itself. Saying
+ * "a message" would understate one and overstate the other.
+ */
+export const CONNECT_FINE =
+  "Connecting shares an address. Nothing is signed until a review is submitted, and every report published is public.";
+
+export const CONNECT_NO_WALLET_TITLE = "No Wallet Here";
+export const CONNECT_NO_WALLET =
+  "This browser has no wallet extension, so nothing can be signed from it. Reading a report and running the gate both work without one.";
+
+export const CONNECT_SIGNING_TITLE = "Check Your Wallet";
+export const CONNECT_SIGNING_LEDE = "Approve the request to open the workspace.";
+export const CONNECT_SIGNING_STATUS = "waiting for the wallet";
+
+export const CONNECT_READY_TITLE = "Wallet Connected";
+export const CONNECT_CONTINUE = "Continue to the workspace";
+export const CONNECT_BACK = "Back to the site";
+export const CONNECT_EYEBROW = "Review workspace";
+
+export const WRONG_CHAIN_TITLE = "Wrong Network";
+
+export const PANE_HOME_TITLE = "New review";
+export const PANE_REPORTS_TITLE = "Reports";
+export const PANE_REPORTS_LEDE =
+  "Every report this contract has issued, newest first.";
+export const PANE_REPORTS_NOTE =
+  "A suspended review is kept beside a finalized one, because a split is a finding about the rubric and not a failed run.";
+export const PANE_VALIDATORS_TITLE = "Validators";
+export const PANE_VALIDATORS_LEDE =
+  "The pool this network draws a jury from, and what each node is running.";
+export const PANE_SETTINGS_TITLE = "Settings";
+export const PANE_SETTINGS_LEDE =
+  "The rubric, the network, the wallet and how this workspace looks.";
+
+/**
+ * Why no per-validator mark is shown.
+ *
+ * The single most load-bearing sentence in the workspace: the design draws five
+ * nodes each with its own score, and that number does not exist at any layer.
+ */
+export const VALIDATORS_NO_MARKS =
+  "A validator's vote is one bit - it agrees with the leader's result or it does not - so no per-node mark exists to show, here or in the contract. What the network publishes is who is in the pool and what they run.";
+
+export const POOL_UNREADABLE =
+  "The node did not answer, so the pool is unknown rather than empty.";
+
+/**
+ * The five lines of the running panel.
+ *
+ * The design has five stages too, but its third reads "five validators are
+ * marking independently" and its fourth "marks are being compared, criterion by
+ * criterion". Neither is observable from here: the jury size is the protocol's
+ * to choose per transaction, and the comparison happens inside consensus where
+ * nothing reports progress. These say what is actually known to be underway.
+ *
+ * This is a stage line, not a progress bar. It never claims to know how far
+ * along a step is, because nothing tells it.
+ */
+export const RUN_STAGES = [
+  "the transaction is being submitted",
+  "validators are fetching the source",
+  "the gate runs again on the agreed bytes",
+  "validators mark against the published anchors",
+  "the report is being written on chain",
+];
+
+export const RUN_EYEBROW = "Review in progress";
+export const RUN_NOTE =
+  "Every validator fetches the source and marks it. Rotations are normal, so this takes minutes rather than seconds.";
+
+export const APP_HOME_RUNNING_TITLE = "Under review";
+export const APP_HOME_RUNNING_LEDE =
+  "The source is with the validators. Nothing here needs attention until it settles.";
+export const APP_HOME_DONE_LEDE =
+  "Finalized on chain, and permanent. The marks below are what the validators agreed on.";
+export const APP_HOME_SPLIT_TITLE = "No report issued";
+export const APP_HOME_SPLIT_LEDE =
+  "The jury did not land on the same marks, so nothing was recorded.";
+
+export const COPY_LINK = "Copy permalink";
+export const COPY_LINK_DONE = "Permalink copied";
+
+/** The three cards under the compose box. */
+export const HOW_CARDS = [
+  {
+    kicker: "Step one, free",
+    body: "The gate checks four things are present before any validator spends an inference.",
+  },
+  {
+    kicker: "Step two, one transaction",
+    body: "Validators fetch the source, agree on the bytes, and mark it against anchors published before anyone was scored.",
+  },
+  {
+    kicker: "Step three, permanent",
+    body: "One permalink carries the source, the digest, the rubric it was judged against and every mark.",
+  },
+];

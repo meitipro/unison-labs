@@ -1,7 +1,7 @@
 /**
  * Is the deployed contract byte-for-byte the source on disk?
  *
- *   npm run match -- 0x…
+ *   npm run match -- 0x...
  *
  * Worth one call before trusting anything a live contract says. Editing
  * contracts/touchstone.py invalidates the deployment silently -- the site keeps

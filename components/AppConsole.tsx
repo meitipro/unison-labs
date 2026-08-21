@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * The dApp: sidebar, source, and everything a submission turns into.
+ * The workspace's Home pane: source in, and everything a submission turns into.
  *
- * The design's `New assay` screen, wired to the real thing. Two inputs rather
- * than one, because they do different jobs and the design's single paste box
- * cannot do the second:
+ * The design's compose screen, wired to the real thing. Two inputs rather than
+ * one, because they do different jobs and the design's single paste box cannot
+ * do the second:
  *
  *   a raw file URL  the validators fetch it themselves, agree on the bytes and
  *                   mark it. This is what produces a report.
@@ -16,15 +16,19 @@
  *
  * WHAT RUNS WHERE, for the URL path: this browser fetches the source, runs the
  * published gate, hashes it and asks the chain whether those exact bytes
- * already hold a report — all free, and a refusal stops there. Only then does
+ * already hold a report - all free, and a refusal stops there. Only then does
  * anything ask for a signature.
+ *
+ * The rail, the header chips and the theme switch belong to `WorkspaceShell`;
+ * this renders the pane and its own title, which follows the phase the way the
+ * design's `appTitle` does.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import Mark from "./Mark";
 import Streak from "./Streak";
-import WalletButton from "./WalletButton";
+import { WorkspaceHeader } from "./WorkspaceShell";
 import * as copy from "../lib/copy";
 import * as fmt from "../lib/format";
 import { IS_LIVE, NETWORK_LABEL, SAMPLES_ARE_REACHABLE, SAMPLE_BASE } from "../lib/chain";
@@ -54,7 +58,14 @@ type Phase =
   | { at: "refused"; gate: GateResult | null; why: string }
   | { at: "scored"; gate: GateResult; report: Report; votes: Votes | null; provisional: boolean };
 
-export default function AppConsole({ names }: { names: Record<string, string> }) {
+export default function AppConsole({
+  names,
+  rubric,
+}: {
+  names: Record<string, string>;
+  /** The rubric version the contract publishes, for the header chip. */
+  rubric: string;
+}) {
   const wallet = useWallet();
   const [mode, setMode] = useState<Mode>("url");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -84,8 +95,6 @@ export default function AppConsole({ names }: { names: Record<string, string> })
       resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [phase.at]);
-
-  const busy = phase.at === "working";
 
   const submit = useCallback(
     async (event?: React.FormEvent) => {
@@ -174,8 +183,13 @@ export default function AppConsole({ names }: { names: Record<string, string> })
 
       let outcome: Outcome;
       try {
-        outcome = await assay(account, url, siteUrl.trim(), (stage) =>
-          setPhase((current) => (current.at === "working" ? { ...current, stage } : current)),
+        outcome = await assay(
+          account,
+          url,
+          siteUrl.trim(),
+          (stage) =>
+            setPhase((current) => (current.at === "working" ? { ...current, stage } : current)),
+          wallet.provider ?? undefined,
         );
       } catch (error) {
         setPhase({ at: "refused", gate, why: readableError(error) });
@@ -217,358 +231,487 @@ export default function AppConsole({ names }: { names: Record<string, string> })
   );
 
   const gate = "gate" in phase ? phase.gate : null;
+  const ready = mode === "paste" ? pasted.trim().length > 0 : sourceUrl.trim().length > 0;
+
+  /* The header follows the phase, the way the design's `appTitle` does. */
+  const title =
+    phase.at === "working"
+      ? copy.APP_HOME_RUNNING_TITLE
+      : phase.at === "scored"
+        ? `Report ${phase.report.id}`
+        : phase.at === "split"
+          ? copy.APP_HOME_SPLIT_TITLE
+          : copy.APP_TITLE;
+  const lede =
+    phase.at === "working"
+      ? copy.APP_HOME_RUNNING_LEDE
+      : phase.at === "scored"
+        ? copy.APP_HOME_DONE_LEDE
+        : phase.at === "split"
+          ? copy.APP_HOME_SPLIT_LEDE
+          : copy.APP_LEDE;
 
   return (
-    <div className="app">
-      {/* ---------------- sidebar ---------------------------------------- */}
-      <aside className="app-aside">
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ display: "grid", placeItems: "center", width: 34, height: 34, borderRadius: "50%", background: "var(--white)" }}>
-            <Mark size={34} />
-          </span>
-          <span style={{ fontSize: 15, fontWeight: 500, color: "var(--white)" }}>unison</span>
-          <span className="tag" style={{ marginLeft: "auto", fontSize: 9.5, padding: "3px 8px" }}>
-            dapp
-          </span>
-        </div>
+    <>
+      <WorkspaceHeader title={title} lede={lede} standard={rubric || undefined} />
 
-        <nav className="app-nav" aria-label="dApp">
-          <span aria-current="page">
-            <span className="dot" />
-            New assay
-          </span>
-          <a href="/#record">
-            <span className="dot-off" />
-            Reports
-          </a>
-          <a href="/rubric">
-            <span className="dot-off" />
-            Rubric v1
-          </a>
-        </nav>
-
-        <div style={{ marginTop: "auto", display: "grid", gap: 12 }}>
-          <div className="mono" style={{ fontSize: 9.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--dim)" }}>
-            Network
-          </div>
-          <div className="mono" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--dim)" }}>
-            <span className="dot blink" />
-            genlayer {NETWORK_LABEL}
-          </div>
-          <a href="/" className="link-quiet" style={{ textAlign: "left" }}>
-            ← Back to the site
-          </a>
-        </div>
-      </aside>
-
-      {/* ---------------- main ------------------------------------------- */}
-      <main className="app-main">
-        <div style={{ maxWidth: 940, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: "clamp(1.5rem, 2.4vw, 2rem)", lineHeight: 1.08, fontWeight: 500, letterSpacing: "-0.032em", color: "var(--white)" }}>
-                {copy.APP_TITLE}
-              </h1>
-              <p className="body" style={{ margin: "10px 0 0", maxWidth: "52ch", color: "var(--dim)" }}>
-                {copy.APP_LEDE}
-              </p>
-            </div>
-            {/* The design's static address chip, made real. */}
-            <WalletButton />
-          </div>
-
-          <form className="card-sm" style={{ marginTop: 26 }} onSubmit={submit}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-              <div className="mono" style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--dim)" }}>
-                {copy.APP_SOURCE_LABEL}
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  aria-pressed={mode === "url"}
-                  onClick={() => setMode("url")}
-                  disabled={busy}
-                >
-                  URL
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  aria-pressed={mode === "paste"}
-                  onClick={() => setMode("paste")}
-                  disabled={busy}
-                >
-                  Paste
-                </button>
-              </div>
-            </div>
-
-            {mode === "url" ? (
-              <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-                <label>
-                  <span className="mono" style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--dim)" }}>
-                    {copy.APP_URL_LABEL}
-                  </span>
-                  <input
-                    className="app-input"
-                    style={{ marginTop: 8 }}
-                    type="url"
-                    inputMode="url"
-                    spellCheck={false}
-                    placeholder={copy.HERO_PLACEHOLDER}
-                    value={sourceUrl}
-                    onChange={(e) => setSourceUrl(e.target.value)}
-                    disabled={busy}
-                  />
-                </label>
-                <label>
-                  <span className="mono" style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--dim)" }}>
-                    {copy.APP_SITE_LABEL}
-                  </span>
-                  <input
-                    className="app-input"
-                    style={{ marginTop: 8 }}
-                    type="url"
-                    inputMode="url"
-                    spellCheck={false}
-                    placeholder={copy.PLACEHOLDER_SITE}
-                    value={siteUrl}
-                    onChange={(e) => setSiteUrl(e.target.value)}
-                    disabled={busy}
-                  />
-                </label>
-              </div>
-            ) : (
-              <>
-                <textarea
-                  className="app-textarea"
-                  spellCheck={false}
-                  aria-label={copy.APP_SOURCE_LABEL}
-                  placeholder={copy.APP_PASTE_PLACEHOLDER}
-                  value={pasted}
-                  onChange={(e) => setPasted(e.target.value)}
-                  disabled={busy}
-                />
-                <p className="body" style={{ margin: "10px 0 0", fontSize: 12.5, color: "var(--dim)" }}>
-                  {copy.APP_PASTE_NOTE}
-                </p>
-              </>
-            )}
-
-            <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <button type="submit" className="btn btn-glow" disabled={busy} style={{ fontSize: 14, padding: "12px 26px" }}>
-                {busy ? "Running" : mode === "paste" ? "Run the gate" : copy.BUTTON}
+      {/* ---------------- compose ------------------------------------- */}
+      {phase.at !== "working" ? (
+        <form className="ws-panel" onSubmit={submit}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            <div className="ws-seg">
+              <button type="button" aria-pressed={mode === "paste"} onClick={() => setMode("paste")}>
+                Paste source
               </button>
-              {mode === "paste" ? (
-                <span className="mono" style={{ fontSize: 10.5, color: "var(--dim)" }}>
-                  {copy.charCount(pasted.length)}
-                </span>
-              ) : (
-                <div className="samples" style={{ gap: 4 }}>
-                  <span>{copy.SAMPLES_LEAD}</span>
-                  {copy.SAMPLES.map((sample, index) => (
-                    <span key={sample.file} className={index > 0 ? "dot-sep" : undefined}>
-                      {index > 0 ? <span style={{ margin: "0 6px", color: "var(--dim)" }}>·</span> : null}
-                      <button
-                        type="button"
-                        className="link-quiet"
-                        onClick={() => {
-                          setSourceUrl(`${SAMPLE_BASE}/${sample.file}`);
-                          setPhase({ at: "idle" });
-                        }}
-                        disabled={busy}
-                      >
-                        {sample.label}
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <button type="button" aria-pressed={mode === "url"} onClick={() => setMode("url")}>
+                From URL
+              </button>
             </div>
-
-            {!SAMPLES_ARE_REACHABLE && mode === "url" ? (
-              <p className="notice" style={{ marginTop: 14 }}>
-                {copy.SAMPLES_UNREACHABLE}
-              </p>
-            ) : null}
-          </form>
-
-          {/* ---------------- running ------------------------------------ */}
-          {phase.at === "working" ? (
-            <div className="card-sm" style={{ marginTop: 18, borderColor: "rgba(200,149,28,.28)" }}>
-              <div className="mono" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "var(--gold-lt)" }}>
-                <span className="spinner" />
-                {phase.stage === "scoring" || phase.stage === "accepted" || phase.stage === "finalized"
-                  ? copy.STAGE_SCORING
-                  : copy.STAGE_FETCHING}
-              </div>
-              <p className="body" style={{ marginTop: 12, fontSize: 12.5 }}>
-                Every validator fetches the source and marks it. Rotations are normal;
-                this can take minutes rather than seconds.
-              </p>
+            <div className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <span>
+                {mode === "url"
+                  ? sourceUrl.trim()
+                    ? "one raw file"
+                    : "no url yet"
+                  : copy.charCount(pasted.length)}
+              </span>
+              {ready ? (
+                <button
+                  type="button"
+                  className="ws-quiet"
+                  style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}
+                  onClick={() => {
+                    setPasted("");
+                    setSourceUrl("");
+                    setSiteUrl("");
+                    setPhase({ at: "idle" });
+                  }}
+                >
+                  clear
+                </button>
+              ) : null}
             </div>
-          ) : null}
-
-          {/* ---------------- the gate ----------------------------------- */}
-          <div ref={resultRef}>
-            {gate ? (
-              <div className="card-sm" style={{ marginTop: 18 }}>
-                <div className="mono" style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--dim)" }}>
-                  The gate
-                </div>
-                <div style={{ marginTop: 14 }}>
-                  {gate.rows.map((row) => (
-                    <div key={row.id} className="gate-row">
-                      <span className={`gate-glyph ${row.passed ? "pass" : "miss"}`} aria-hidden="true">
-                        {row.passed ? "✓" : "✗"}
-                      </span>
-                      <span>
-                        {row.name.toLowerCase()}
-                        <span className="sr-only">{row.passed ? " — passed" : " — missing"}</span>
-                      </span>
-                      <span className="gate-req">{row.required ? "REQ" : ""}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className={`verdict${gate.eligible ? "" : " bad"}`}>
-                  {gate.eligible
-                    ? `eligible, ${gate.passed} of ${gate.total} present`
-                    : `refused at the gate, missing ${fmt.ids(gate.missing)}`}
-                </div>
-              </div>
-            ) : null}
-
-            {phase.at === "refused" ? (
-              <div className="notice warn" style={{ marginTop: 18 }}>
-                {phase.why}
-              </div>
-            ) : null}
-            {phase.at === "unreadable" ? (
-              <div className="notice" style={{ marginTop: 18 }}>
-                {phase.why}
-              </div>
-            ) : null}
-            {phase.at === "already" ? (
-              <div className="notice" style={{ marginTop: 18 }}>
-                This exact source was already reviewed, see{" "}
-                <a href={`/r/${phase.reportId}`} style={{ color: "var(--gold-lt)" }}>
-                  report {phase.reportId}
-                </a>
-                .
-              </div>
-            ) : null}
-            {phase.at === "split" ? (
-              <div className="notice" style={{ marginTop: 18, borderLeftColor: "var(--gold)" }}>
-                {phase.criterion ? copy.nodesDisagreed(phase.criterion) : copy.NODES_DISAGREED_UNNAMED}
-              </div>
-            ) : null}
-            {phase.at === "gated" && gate?.eligible ? (
-              <div className="notice" style={{ marginTop: 18 }}>
-                {copy.APP_PASTE_NOTE}
-              </div>
-            ) : null}
           </div>
 
-          {/* ---------------- the report --------------------------------- */}
-          {phase.at === "scored" ? (
+          {mode === "paste" ? (
             <>
-              {phase.provisional ? (
-                <div className="mono" style={{ marginTop: 18, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold-lt)" }}>
-                  accepted, provisional
-                </div>
-              ) : null}
+              <textarea
+                className="ws-field"
+                spellCheck={false}
+                aria-label={copy.APP_SOURCE_LABEL}
+                placeholder={copy.APP_PASTE_PLACEHOLDER}
+                value={pasted}
+                onChange={(event) => setPasted(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                    event.preventDefault();
+                    void submit();
+                  }
+                }}
+              />
+              <p className="ws-note" style={{ marginTop: 12 }}>
+                {copy.APP_PASTE_NOTE}
+              </p>
+            </>
+          ) : (
+            <>
+              <label>
+                <span className="sr-only">{copy.APP_URL_LABEL}</span>
+                <input
+                  className="ws-field"
+                  type="url"
+                  inputMode="url"
+                  spellCheck={false}
+                  placeholder={copy.HERO_PLACEHOLDER}
+                  value={sourceUrl}
+                  onChange={(event) => setSourceUrl(event.target.value)}
+                  onKeyDown={(event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                      event.preventDefault();
+                      void submit();
+                    }
+                  }}
+                />
+              </label>
+              <label>
+                <span className="sr-only">{copy.APP_SITE_LABEL}</span>
+                <input
+                  className="ws-field"
+                  style={{ marginTop: 10 }}
+                  type="url"
+                  inputMode="url"
+                  spellCheck={false}
+                  placeholder={copy.PLACEHOLDER_SITE}
+                  value={siteUrl}
+                  onChange={(event) => setSiteUrl(event.target.value)}
+                />
+              </label>
+              <p className="ws-note" style={{ marginTop: 12 }}>
+                Validators fetch the raw file themselves and record its digest, so the file they
+                read is the file the report is about. A site url is optional, and scored
+                separately.
+              </p>
+            </>
+          )}
 
-              <div className="card-sm" style={{ marginTop: 12, padding: 26 }}>
-                <div className="mono" style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--dim)" }}>
-                  Report {phase.report.id}
-                </div>
-                {phase.report.subjects.map((subject, index) => (
-                  <div key={subject.kind} style={{ marginTop: index === 0 ? 18 : 34 }}>
-                    <Streak
-                      score={subject.total}
-                      kind={subject.kind}
-                      band={subject.band}
-                      drawAfterMs={200 + index * 900}
-                      contested={Boolean(
-                        phase.report.contest &&
-                          subject.marks.some((m) => m.id === phase.report.contest?.criterion),
-                      )}
-                    />
-                  </div>
+          <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <button type="submit" className="ws-run" disabled={!ready}>
+              {mode === "paste" ? "Run the gate" : copy.BUTTON}
+            </button>
+            {mode === "url" ? (
+              <span className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "normal" }}>
+                <span>{copy.SAMPLES_LEAD}</span>
+                {copy.SAMPLES.map((sample, index) => (
+                  <span key={sample.file} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    {index > 0 ? <span aria-hidden="true">-</span> : null}
+                    <button
+                      type="button"
+                      className="ws-quiet"
+                      style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}
+                      onClick={() => {
+                        setSourceUrl(`${SAMPLE_BASE}/${sample.file}`);
+                        setPhase({ at: "idle" });
+                      }}
+                    >
+                      {sample.label}
+                    </button>
+                  </span>
                 ))}
+              </span>
+            ) : null}
+            <span className="ws-mono-quiet" style={{ marginLeft: "auto" }}>
+              {ready ? "or press cmd + enter" : "nothing to review yet"}
+            </span>
+          </div>
 
-                {phase.votes ? (
-                  <div className="mono" style={{ marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--line)", fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold-lt)" }}>
-                    {copy.consensus(phase.votes.agreed, phase.votes.of)}
-                  </div>
-                ) : null}
+          {!SAMPLES_ARE_REACHABLE && mode === "url" ? (
+            <p className="ws-note">{copy.SAMPLES_UNREACHABLE}</p>
+          ) : null}
+        </form>
+      ) : null}
 
-                <div className="kv" style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: "14px 24px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "62px 1fr", gap: 12 }}>
-                    <span className="kv-key">digest</span>
-                    <span className="kv-val">{fmt.digest(phase.report.digest)}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "62px 1fr", gap: 12 }}>
-                    <span className="kv-key">rubric</span>
-                    <span className="kv-val">{phase.report.rubric}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "62px 1fr", gap: 12 }}>
-                    <span className="kv-key">gate</span>
-                    <span className="kv-val">
-                      {phase.report.gate.passed} of {phase.report.gate.total}
-                    </span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "62px 1fr", gap: 12 }}>
-                    <span className="kv-key">source</span>
-                    <span className="kv-val">{fmt.url(phase.report.source_url, 40)}</span>
-                  </div>
-                </div>
-
-                <p className="body" style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid var(--line)", fontSize: 13.5, color: "var(--dim)" }}>
-                  {copy.CARD_2_BODY}
-                </p>
-
-                <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <a className="btn btn-quiet" href={`/r/${phase.report.id}`}>
-                    Open the permalink
-                  </a>
-                  <a className="btn btn-quiet" href="/rubric">
-                    {copy.ACTION_READ_RUBRIC}
-                  </a>
-                </div>
+      {/* ---------------- what happens next --------------------------- */}
+      {phase.at === "idle" ? (
+        <div className="ws-cards">
+          {copy.HOW_CARDS.map((card) => (
+            <div key={card.kicker}>
+              <div className="ws-kicker">{card.kicker}</div>
+              <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.55, color: "var(--ai2)" }}>
+                {card.body}
               </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
-              {/* Every mark, with the name the contract published for it. */}
-              {phase.report.subjects.map((subject) => (
-                <div key={subject.kind} className="card-sm" style={{ marginTop: 12 }}>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--dim)" }}>
-                    {subject.kind}
-                  </div>
-                  {subject.marks.map((mark) => (
-                    <div key={mark.id} className="mark-row">
-                      <div className="mark-head">
-                        <span className="h3">{names[mark.id] || mark.id}</span>
-                        <span className="mark-score">{mark.score}</span>
-                      </div>
-                      <p className="body" style={{ margin: "10px 0 0" }}>
-                        {mark.reason}
-                      </p>
-                      <span className="pips" aria-hidden="true">
-                        <span className={`pip${mark.score > 0 ? " on" : ""}`} />
-                        <span className={`pip${mark.score > 1 ? " on" : ""}`} />
-                      </span>
-                      <span className="sr-only">
-                        {mark.id}, {mark.score} out of 2
-                      </span>
-                    </div>
-                  ))}
+      {/* ---------------- running ------------------------------------- */}
+      {phase.at === "working" ? <RunningPanel stage={phase.stage} /> : null}
+
+      {/* ---------------- the gate ------------------------------------ */}
+      <div ref={resultRef}>
+        {gate ? (
+          <div className="ws-panel">
+            <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
+              The gate
+            </div>
+            <div className="ws-rowlist">
+              {gate.rows.map((row) => (
+                <div
+                  key={row.id}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "18px minmax(0, 1fr) auto",
+                    gap: 12,
+                    alignItems: "center",
+                    padding: "11px 0",
+                  }}
+                >
+                  <span aria-hidden="true" style={{ color: row.passed ? "var(--ag)" : "var(--afail)" }}>
+                    {row.passed ? "✓" : "✗"}
+                  </span>
+                  <span style={{ fontSize: 14, color: "var(--ai2)" }}>
+                    {row.name.toLowerCase()}
+                    <span className="sr-only">{row.passed ? ", passed" : ", missing"}</span>
+                  </span>
+                  <span className="ws-mono-quiet">{row.required ? "REQ" : ""}</span>
                 </div>
               ))}
-            </>
-          ) : null}
+            </div>
+            <div
+              className="mono"
+              style={{
+                marginTop: 16,
+                paddingTop: 14,
+                borderTop: "1px solid var(--al)",
+                fontSize: 11.5,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: gate.eligible ? "var(--ag)" : "var(--afail)",
+              }}
+            >
+              {gate.eligible
+                ? `eligible, ${gate.passed} of ${gate.total} present`
+                : `refused at the gate, missing ${fmt.ids(gate.missing)}`}
+            </div>
+          </div>
+        ) : null}
+
+        {phase.at === "refused" ? (
+          <div className="ws-panel" data-tone="fail" role="alert">
+            <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em", color: "var(--afail)" }}>
+              Not submitted
+            </div>
+            <p style={{ margin: "14px 0 0", maxWidth: "58ch", fontSize: 14.5, lineHeight: 1.62, color: "var(--ai2)" }}>
+              {phase.why}
+            </p>
+          </div>
+        ) : null}
+
+        {phase.at === "unreadable" ? (
+          <div className="ws-panel">
+            <p style={{ margin: 0, maxWidth: "58ch", fontSize: 14.5, lineHeight: 1.62, color: "var(--ai2)" }}>
+              {phase.why}
+            </p>
+          </div>
+        ) : null}
+
+        {phase.at === "already" ? (
+          <div className="ws-panel">
+            <p style={{ margin: 0, maxWidth: "58ch", fontSize: 14.5, lineHeight: 1.62, color: "var(--ai2)" }}>
+              This exact source was already reviewed, see{" "}
+              <Link href={`/r/${phase.reportId}`} style={{ color: "var(--ag)" }}>
+                report {phase.reportId}
+              </Link>
+              .
+            </p>
+          </div>
+        ) : null}
+
+        {phase.at === "split" ? <SplitPanel why={phase.why} criterion={phase.criterion} /> : null}
+
+        {phase.at === "scored" ? (
+          <ReportPanel
+            report={phase.report}
+            votes={phase.votes}
+            provisional={phase.provisional}
+            names={names}
+          />
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+
+const STAGE_ORDER: Stage[] = ["sending", "sent", "fetching", "scoring", "accepted", "finalized"];
+
+/**
+ * The design's five-row stage list, driven by the real transaction.
+ *
+ * The six stages a write reports collapse to five rows, because `accepted` and
+ * `finalized` are the same row from a reader's point of view: the report is
+ * being written either way, and the difference between them is whether it can
+ * still be revised, which is said on the report itself where it matters.
+ *
+ * This is a stage line and not a progress bar. Nothing reports how far into a
+ * step consensus is, so nothing here pretends to.
+ */
+function RunningPanel({ stage }: { stage: Stage }) {
+  const at = Math.min(Math.max(STAGE_ORDER.indexOf(stage), 0), 4);
+  return (
+    <div className="ws-panel" data-tone="gold">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
+          {copy.RUN_EYEBROW}
         </div>
-      </main>
+        <div className="ws-mono-quiet" style={{ color: "var(--ag)" }} role="status">
+          step {at + 1} of {copy.RUN_STAGES.length}
+        </div>
+      </div>
+      <div className="ws-steps">
+        {copy.RUN_STAGES.map((text, index) => (
+          <div
+            key={text}
+            className="ws-step"
+            data-at={index < at ? "done" : index === at ? "now" : "waiting"}
+          >
+            <i aria-hidden="true" />
+            <span>{text}</span>
+          </div>
+        ))}
+      </div>
+      <p className="ws-note">{copy.RUN_NOTE}</p>
     </div>
+  );
+}
+
+function SplitPanel({ why, criterion }: { why: string; criterion: string }) {
+  return (
+    <div className="ws-panel" data-tone="fail">
+      <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em", color: "var(--afail)" }}>
+        {copy.APP_HOME_SPLIT_TITLE}
+      </div>
+      <h2
+        style={{
+          margin: "14px 0 0",
+          maxWidth: "30ch",
+          fontSize: "clamp(1.3rem, 2.2vw, 1.75rem)",
+          lineHeight: 1.1,
+          fontWeight: 500,
+          letterSpacing: "-0.03em",
+          color: "var(--ai)",
+        }}
+      >
+        Validators did not land on the same marks, so nothing was recorded
+      </h2>
+      <p style={{ margin: "14px 0 0", maxWidth: "58ch", fontSize: 14.5, lineHeight: 1.62, color: "var(--ai2)" }}>
+        {criterion ? copy.nodesDisagreed(criterion) : copy.NODES_DISAGREED_UNNAMED}
+      </p>
+      {why ? <p className="ws-note">{why}</p> : null}
+    </div>
+  );
+}
+
+function ReportPanel({
+  report,
+  votes,
+  provisional,
+  names,
+}: {
+  report: Report;
+  votes: Votes | null;
+  provisional: boolean;
+  names: Record<string, string>;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <>
+      <div className="ws-panel" data-tone="gold">
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+          <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
+            Report {report.id}
+            {provisional ? ", accepted and still revisable" : ""}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="ws-ghost"
+              onClick={() => {
+                if (!navigator.clipboard?.writeText) return;
+                void navigator.clipboard
+                  .writeText(`${window.location.origin}/r/${report.id}`)
+                  .then(() => {
+                    setCopied(true);
+                    window.setTimeout(() => setCopied(false), 2000);
+                  });
+              }}
+            >
+              {copied ? copy.COPY_LINK_DONE : copy.COPY_LINK}
+            </button>
+            <Link href={`/r/${report.id}`} className="ws-ghost">
+              Open the permalink
+            </Link>
+          </div>
+        </div>
+
+        {report.subjects.map((subject, index) => (
+          <div key={subject.kind} style={{ marginTop: index === 0 ? 20 : 34 }}>
+            <Streak
+              score={subject.total}
+              kind={subject.kind}
+              band={subject.band}
+              drawAfterMs={200 + index * 900}
+              contested={Boolean(
+                report.contest &&
+                  subject.marks.some((mark) => mark.id === report.contest?.criterion),
+              )}
+            />
+          </div>
+        ))}
+
+        {votes ? (
+          <div
+            className="mono"
+            style={{
+              marginTop: 22,
+              paddingTop: 16,
+              borderTop: "1px solid var(--al)",
+              fontSize: 10.5,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--ag)",
+            }}
+          >
+            {copy.consensus(votes.agreed, votes.of)}
+          </div>
+        ) : null}
+
+        <div className="ws-kv">
+          <div>
+            <span>digest</span>
+            <span style={{ overflowWrap: "anywhere" }}>{fmt.digest(report.digest)}</span>
+          </div>
+          <div>
+            <span>rubric</span>
+            <span>{report.rubric}</span>
+          </div>
+          <div>
+            <span>gate</span>
+            <span>
+              {report.gate.passed} of {report.gate.total}
+            </span>
+          </div>
+          <div>
+            <span>source</span>
+            <span style={{ overflowWrap: "anywhere" }}>{fmt.url(report.source_url, 40)}</span>
+          </div>
+        </div>
+
+        <p
+          className="ws-note"
+          style={{ maxWidth: "62ch", marginTop: 22, paddingTop: 18, borderTop: "1px solid var(--al)" }}
+        >
+          {copy.CARD_2_BODY}
+        </p>
+      </div>
+
+      {/* Every mark, with the name the contract published for it. */}
+      {report.subjects.map((subject) => (
+        <div key={subject.kind} className="ws-panel">
+          <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
+            {subject.kind}, criterion by criterion
+          </div>
+          <div className="ws-rowlist">
+            {subject.marks.map((mark) => (
+              <div key={mark.id}>
+                <div className="ws-crit">
+                  <div>
+                    <div style={{ fontSize: 14.5, fontWeight: 500, letterSpacing: "-0.01em", color: "var(--ai)" }}>
+                      {names[mark.id] || mark.id}
+                    </div>
+                    <div style={{ marginTop: 5, fontSize: 12.5, lineHeight: 1.55, color: "var(--am)" }}>
+                      {mark.reason}
+                    </div>
+                  </div>
+                  <div className="ws-pips" aria-hidden="true">
+                    <i data-on="true" />
+                    <i data-on={mark.score > 0} />
+                    <i data-on={mark.score > 1} />
+                  </div>
+                  <div className="mono" style={{ textAlign: "right", fontSize: 15, color: "var(--ai)" }}>
+                    {mark.score}
+                  </div>
+                </div>
+                <span className="sr-only">
+                  {mark.id}, {mark.score} out of 2
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }

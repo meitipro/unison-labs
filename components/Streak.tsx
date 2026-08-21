@@ -3,8 +3,8 @@
 /**
  * A mark, drawn to length and printed as a numeral beside it.
  *
- * Everything is derived from the score — the width, the variant, the band word,
- * the label a screen reader hears — so no caller can draw a streak that
+ * Everything is derived from the score - the width, the variant, the band word,
+ * the label a screen reader hears - so no caller can draw a streak that
  * disagrees with its own number.
  *
  * The band word always sits beside the numeral. Nothing here is carried by

@@ -190,7 +190,7 @@ export function runGate(source: string, spec: GateSpec = SPEC): GateResult {
  */
 export function refusalSentence(result: GateResult): string {
   return (
-    `Refused before scoring — missing ${result.missing.join(", ")}. ` +
+    `Refused before scoring - missing ${result.missing.join(", ")}. ` +
     "This is not an Intelligent Contract, so no fee is charged and no validator " +
     "spends inference on it."
   );

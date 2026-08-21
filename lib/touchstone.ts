@@ -30,29 +30,73 @@ function reader() {
 const RETRYABLE =
   /unknown rpc error|fetch failed|ECONNRESET|ETIMEDOUT|socket hang up|429|rate/i;
 
+/** The limit is per MINUTE, so a wait measured in hundreds of ms is no wait. */
+const RATE_LIMITED = /rate limit|429/i;
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function read(functionName: string, args: unknown[] = [], attempts = 3) {
+/**
+ * Reads in flight, keyed by the exact call.
+ *
+ * `React.cache()` dedupes within one request and does nothing across route
+ * boundaries, which is where the duplication actually is: the workspace rail
+ * asks for `stats()` and the last three reports on all four of its panes, and
+ * `next build` prerenders those panes CONCURRENTLY. Sixteen calls for four
+ * distinct answers, against a limit of thirty a minute -- the build really did
+ * exhaust it and bake "the node did not answer" into pages that had perfectly
+ * good data a second earlier.
+ *
+ * This is deliberately an IN-FLIGHT map and not a result cache: an entry is
+ * dropped as soon as it settles, plus a short grace window for the concurrent
+ * renders that are moments behind. Nothing here can serve a stale answer for
+ * longer than that window, which is far inside the revalidate period anyway.
+ */
+const GRACE_MS = 5000;
+const inFlight = new Map<string, { at: number; promise: Promise<string | null> }>();
+
+async function read(functionName: string, args: unknown[] = [], attempts = 4) {
   if (!IS_LIVE) return null;
-  const client = reader();
-  for (let i = 1; i <= attempts; i += 1) {
-    try {
-      const out = await client.readContract({
-        address: TOUCHSTONE as `0x${string}`,
-        functionName,
-        args: args as never,
-      });
-      return typeof out === "string" ? out : JSON.stringify(out);
-    } catch (error) {
-      const message = String((error as Error)?.message ?? error);
-      if (RETRYABLE.test(message) && i < attempts) {
-        await sleep(900 * i);
-        continue;
+
+  const key = `${functionName}(${JSON.stringify(args)})`;
+  const existing = inFlight.get(key);
+  if (existing && Date.now() - existing.at < GRACE_MS) return existing.promise;
+
+  const promise = (async () => {
+    const client = reader();
+    for (let i = 1; i <= attempts; i += 1) {
+      try {
+        const out = await client.readContract({
+          address: TOUCHSTONE as `0x${string}`,
+          functionName,
+          args: args as never,
+        });
+        return typeof out === "string" ? out : JSON.stringify(out);
+      } catch (error) {
+        const message = String((error as Error)?.message ?? error);
+        if (RETRYABLE.test(message) && i < attempts) {
+          // A per-minute budget that is spent stays spent for a while, so the
+          // backoff has to be in seconds. 2, 6, 12 rather than 0.9, 1.8.
+          await sleep(RATE_LIMITED.test(message) ? 2000 * i * i : 900 * i);
+          continue;
+        }
+        return null;
       }
-      return null;
     }
-  }
-  return null;
+    return null;
+  })();
+
+  inFlight.set(key, { at: Date.now(), promise });
+  promise.finally(() => {
+    const held = inFlight.get(key);
+    /* Leave it for the grace window, then drop it, so nothing is cached
+       beyond the concurrent renders this exists to collapse. */
+    if (held?.promise === promise) {
+      setTimeout(() => {
+        if (inFlight.get(key)?.promise === promise) inFlight.delete(key);
+      }, GRACE_MS).unref?.();
+    }
+  });
+  return promise;
 }
 
 function parse<T>(raw: string | null): T | null {
@@ -127,4 +171,31 @@ export const getStats = cache(async function getStats(): Promise<Stats | null> {
 export async function getNewestReport(stats: Stats | null): Promise<Report | null> {
   if (!stats || !stats.reports) return null;
   return getReport(stats.first_report_id + stats.reports - 1);
+}
+
+/**
+ * The newest few reports, newest first.
+ *
+ * Same arithmetic as `getNewestReport`: ids are issued in order, so the last
+ * `count` of them are the last `count` ids. Reads are cached per request, so
+ * the rail asking for these and a pane asking for one of them is one round
+ * trip, not two -- which matters against a 30-requests-a-minute limit that a
+ * full prerender can exhaust on its own.
+ *
+ * A report that comes back null is dropped rather than rendered as a gap: a
+ * rate-limited read is not a missing report, and the rail is not the place to
+ * explain the difference.
+ */
+export async function getRecentReports(
+  stats: Stats | null,
+  count = 3,
+): Promise<Report[]> {
+  if (!stats || !stats.reports) return [];
+  const newest = stats.first_report_id + stats.reports - 1;
+  const ids: number[] = [];
+  for (let id = newest; id > newest - count && id >= stats.first_report_id; id -= 1) {
+    ids.push(id);
+  }
+  const reports = await Promise.all(ids.map((id) => getReport(id)));
+  return reports.filter((report): report is Report => report !== null);
 }

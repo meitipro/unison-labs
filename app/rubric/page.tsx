@@ -25,7 +25,7 @@ import * as fmt from "../../lib/format";
 import { getRubric, getSplitTable, getStats } from "../../lib/touchstone";
 
 export const metadata: Metadata = {
-  title: "The rubric — Unison",
+  title: "The rubric - Unison",
   description:
     "Every score point has an anchor, published before anyone was scored, and read straight from the contract.",
 };
@@ -89,7 +89,7 @@ export default async function RubricPage() {
                 ) : (
                   TOUCHSTONE || "not configured"
                 )}{" "}
-                <span className="dim">· {NETWORK_LABEL}</span>
+                <span className="dim"> - {NETWORK_LABEL}</span>
               </span>
             </div>
             <div className="kv-row">
@@ -120,7 +120,7 @@ export default async function RubricPage() {
                   {rubric.agreement.max_point_gap}, at most{" "}
                   {rubric.agreement.max_divergent_criteria} criterion differs at
                   all, and the band is identical. The total is summed by{" "}
-                  {rubric.agreement.summed_by}. The reasons are not compared —
+                  {rubric.agreement.summed_by}. The reasons are not compared -
                   two validators reading the same code write the same judgment
                   in different words.
                 </p>
@@ -135,8 +135,8 @@ export default async function RubricPage() {
                 <p className="eyebrow-gold" style={{ margin: "0 0 10px" }}>Counted, or judged</p>
                 <p className="body" style={{ margin: 0 }}>
                   {rubric.agreement.counted_criteria.length} of these criteria
-                  are counted from the source in deterministic code —{" "}
-                  {fmt.joinMono(rubric.agreement.counted_criteria)} — so every
+                  are counted from the source in deterministic code - {" "}
+                  {fmt.joinMono(rubric.agreement.counted_criteria)} - so every
                   validator derives the same score and the same reason without
                   asking a model. The rest are judged:{" "}
                   {fmt.joinMono(rubric.agreement.judged_criteria)}. Every mark
@@ -200,7 +200,7 @@ export default async function RubricPage() {
                       {/* A counted criterion has no split count to report, and a
                           0 in this column would read as agreement the network
                           never actually reached. */}
-                      <td>{row.reads_as === "counted" ? "—" : row.splits}</td>
+                      <td>{row.reads_as === "counted" ? "-" : row.splits}</td>
                       <td className={row.reads_as === "counted" ? "faint" : undefined}>
                         {row.reads_as === "counted" ? "counted, never judged" : row.reads_as}
                       </td>
