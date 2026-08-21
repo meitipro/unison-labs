@@ -28,6 +28,7 @@ import {
   deployWithRetry,
   die,
   requireKey,
+  canonicalSource,
   waitFinal,
 } from "./chain.mjs";
 
@@ -41,7 +42,10 @@ function python() {
 
 async function main() {
   const key = requireKey("UNISONLABS_DEPLOYER_KEY");
-  const code = readFileSync(CONTRACT, "utf8");
+
+  // The exact bytes `npm run match` will compare against, whatever line
+  // endings this particular checkout happens to hold. See canonicalSource.
+  const code = canonicalSource(readFileSync(CONTRACT, "utf8"));
 
   if (!code.startsWith('# { "Depends": "py-genlayer:')) {
     die(

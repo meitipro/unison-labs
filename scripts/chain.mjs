@@ -20,6 +20,28 @@ export function flag(name, fallback) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * The one canonical form of the contract source, used by BOTH deploy and match.
+ *
+ * Two things make a naive byte comparison unusable, and neither is a difference
+ * in the contract:
+ *
+ *   line endings   git's core.autocrlf rewrites the file to CRLF on a Windows
+ *                  checkout and leaves it LF everywhere else, so the same
+ *                  commit would put different bytes on chain depending on who
+ *                  ran the deploy.
+ *   trailing "\n"  the deploy pipeline drops it, so a file that ends with a
+ *                  newline can never match what comes back, however it was
+ *                  written.
+ *
+ * Normalising in one place and deploying exactly what is compared means
+ * `npm run match` answers the question it claims to: are the bytes running on
+ * chain the bytes in this file.
+ */
+export function canonicalSource(text) {
+  return text.split("\r\n").join("\n").replace(/\n+$/, "");
+}
+
 export function pickChain() {
   const raw = (process.env.NEXT_PUBLIC_GENLAYER_NETWORK || "studionet").trim().toLowerCase();
   const bradbury =
