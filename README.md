@@ -12,10 +12,10 @@ scored, and judged by the network rather than by us.
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-101216?style=flat-square)](https://nextjs.org)
 [![MIT](https://img.shields.io/badge/license-MIT-101216?style=flat-square)](LICENSE)
 
-**[Open the live site](https://unison-labs.vercel.app)** &nbsp;.&nbsp;
-[Run a review](https://unison-labs.vercel.app/app) &nbsp;.&nbsp;
-[Read the rubric](https://unison-labs.vercel.app/rubric) &nbsp;.&nbsp;
-[Report 8801](https://unison-labs.vercel.app/r/8801)
+**[Open the live site](https://unisonlabs.tech)** &nbsp;.&nbsp;
+[Run a review](https://unisonlabs.tech/app) &nbsp;.&nbsp;
+[Read the rubric](https://unisonlabs.tech/rubric) &nbsp;.&nbsp;
+[Report 8801](https://unisonlabs.tech/r/8801)
 
 </div>
 
@@ -25,10 +25,10 @@ scored, and judged by the network rather than by us.
 
 | | |
 | --- | --- |
-| Site | https://unison-labs.vercel.app |
+| Site | https://unisonlabs.tech |
 | Contract | [`0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4`](https://explorer-studio.genlayer.com/address/0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4) on GenLayer **studionet** |
 | Rubric | v1, frozen by the transaction that deployed the contract |
-| First mark it ever issued | [report 8801](https://unison-labs.vercel.app/r/8801), a real contract at 3/10 unfit |
+| First mark it ever issued | [report 8801](https://unisonlabs.tech/r/8801), a real contract at 3/10 unfit |
 
 `npm run match -- 0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4` checks the
 deployed bytes against `contracts/touchstone.py` byte for byte. It currently
