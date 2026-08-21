@@ -25,6 +25,11 @@ import { familiesOf, getPool } from "../lib/validators";
 
 export const revalidate = 60;
 
+/** The list laid end to end `times` over, for a marquee copy. */
+function repeat<T>(items: T[], times: number): T[] {
+  return Array.from({ length: times }, () => items).flat();
+}
+
 export default async function LandingPage() {
   const [rubric, stats, pool] = await Promise.all([getRubric(), getStats(), getPool()]);
   const newest = await getNewestReport(stats);
@@ -78,20 +83,33 @@ export default async function LandingPage() {
             >
               {copy.POOL_LABEL}
             </div>
+            {/* Two copies, each its own row, because the loop translates by
+                exactly one copy. Each copy repeats the list enough times to
+                outrun a normal desktop, so the chips keep the design's 10px
+                gap rather than being stretched apart to fill; `min-width:100vw`
+                in globals.css is the backstop past that. */}
             <div className="marquee" aria-hidden="true">
-              {[...families, ...families].map((name, i) => (
-                <span key={`${name}-${i}`} className="chip-outline">
-                  {name}
-                </span>
+              {[0, 1].map((copyIndex) => (
+                <div key={copyIndex} className="marquee-copy">
+                  {repeat(families, 3).map((name, i) => (
+                    <span key={`${name}-${i}`} className="chip-outline">
+                      {name}
+                    </span>
+                  ))}
+                </div>
               ))}
             </div>
           </>
         ) : null}
         <div className="marquee-back" aria-hidden="true">
-          {[...copy.POOL_CRITERIA, ...copy.POOL_CRITERIA].map((name, i) => (
-            <span key={`${name}-${i}`} className="mono" style={{ fontSize: 11.5, color: "var(--dim)", whiteSpace: "nowrap" }}>
-              {name}
-            </span>
+          {[0, 1].map((copyIndex) => (
+            <div key={copyIndex} className="marquee-copy">
+              {repeat(copy.POOL_CRITERIA, 3).map((name, i) => (
+                <span key={`${name}-${i}`} className="mono" style={{ fontSize: 11.5, color: "var(--dim)", whiteSpace: "nowrap" }}>
+                  {name}
+                </span>
+              ))}
+            </div>
           ))}
         </div>
       </div>

@@ -341,8 +341,17 @@ textarea::placeholder {
   transform: translateY(-1px);
 }
 
+/*
+ * Which header arm shows is decided HERE, not in React state.
+ *
+ * Holding the breakpoint in `useState(true)` meant the server and the first
+ * client paint always produced the wide pill, so a 320px phone painted a nav
+ * running off the screen with Launch dApp entirely past the edge before an
+ * effect corrected it. A media query is right on the first paint and does not
+ * need JavaScript to have run at all.
+ */
 .burger {
-  display: grid;
+  display: none;
   place-items: center;
   gap: 4px;
   flex-shrink: 0;
@@ -359,6 +368,16 @@ textarea::placeholder {
   width: 18px;
   height: 1.5px;
   transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease;
+}
+
+@media (max-width: 720px) {
+  .pill-nav,
+  .launch {
+    display: none;
+  }
+  .burger {
+    display: grid;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -785,19 +804,48 @@ textarea:focus-visible,
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
 }
 
-.marquee {
+/*
+ * Two copies of the list, translated by exactly -50%, which lands copy two
+ * where copy one started and loops seamlessly.
+ *
+ * THAT ONLY HOLDS WHILE ONE COPY IS AT LEAST AS WIDE AS THE VIEWPORT. With
+ * `width: max-content` and twelve short chips a copy came out about 1050px, so
+ * on anything wider than that the track ran out mid-screen: the chips clumped
+ * against the left edge, slid away, and left a band of empty black on the
+ * right. It read as the row being knocked sideways rather than as a marquee.
+ *
+ * The fix is structural rather than a guess at how many repeats are enough.
+ * Each copy is its own flex row with `min-width: 100vw`, so a copy is never
+ * narrower than the screen and -50% is never less than one screen of travel.
+ * Where the chips do not fill that width they are spread across it instead of
+ * being left to huddle at one end.
+ */
+.marquee,
+.marquee-back {
   display: flex;
   width: max-content;
-  gap: 10px;
+}
+
+.marquee {
   animation: unmarq 38s linear infinite;
 }
 
 .marquee-back {
-  display: flex;
-  width: max-content;
-  gap: 26px;
   margin-top: 10px;
   animation: unmarqb 44s linear infinite;
+}
+
+.marquee-copy {
+  flex: none;
+  min-width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 10px;
+}
+
+.marquee-back .marquee-copy {
+  gap: 26px;
 }
 
 .chip-outline {
