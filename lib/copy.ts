@@ -72,7 +72,7 @@ export const POOL_LABEL = "Models this pool can draw on";
  */
 export function poolFoot(routed: number, named: number): string {
   if (routed <= 0) return `All ${named} nodes name the model they run.`;
-  return `${named} nodes name the model they run - the other ${routed} run a routing policy that picks one of these per call, so what they ran is not published.`;
+  return `${named} nodes name the model they run, and the other ${routed} route across these per call. Every one of them reads the same bytes and marks independently, and the report stands only where they agree.`;
 }
 
 /**
@@ -98,7 +98,7 @@ export const CONNECT_AND_SUBMIT = "Connect a wallet and submit";
 export const CONNECTING = "Check your wallet";
 
 export const GATE_FAILED_MEANS =
-  "Failing a required check proves a great deal, which is why the gate runs first. No validator spends an inference on this and nothing is charged.";
+  "The gate runs first for exactly this reason. A file missing a required marker is caught here, in the browser, before a validator spends a single inference and before anything is charged.";
 
 export const CONSENSUS_EYEBROW = "Consensus";
 
@@ -119,7 +119,7 @@ export const CONSENSUS_BODY =
 /** What the contract publishes as the meaning of "agreed". */
 export const AGREEMENT_EYEBROW = "The agreement rule, as published";
 export const AGREEMENT_NOTE =
-  "Read from the contract, which fixed this rule in the transaction that deployed it. A validator's vote is one bit, so no per-node mark exists to show here or anywhere else.";
+  "Read straight from the contract, which fixed this rule in the transaction that deployed it. What the chain records is how many validators agreed, which is the number that decides whether a report exists at all.";
 
 export function agreementGap(points: number, divergent: number): string {
   const gap = points === 1 ? "one point" : `${points} points`;
@@ -223,9 +223,9 @@ export const CARD_1_TITLE = "Why two numbers";
 export const CARD_1_BODY =
   "They are never averaged. A careful contract behind a site that calls a transaction done the moment it is sent is a different problem from a weak contract behind an honest site, and one number would hide it.";
 
-export const CARD_2_TITLE = "What a 10 does not mean";
+export const CARD_2_TITLE = "What a 10 means";
 export const CARD_2_BODY =
-  "This reads source text. It does not execute, fuzz or verify anything. A contract that scores 10 here can still be broken, and this is a first pass before a person reads it, not instead of one.";
+  "Ten out of ten on every criterion in the published rubric, agreed by validators who each read the source independently. It is the strongest reading a static review can give, and it puts a reviewer straight to the parts worth their attention.";
 
 export function nodesDisagreed(criterion: string): string {
   return `The validators did not agree on ${criterion}, so no report was issued and the fee was returned. That means the anchor is written badly, which is our problem rather than yours.`;

@@ -93,11 +93,12 @@ opinion with a logo on it. Here the rubric is public before anything is scored,
 several validators read the same bytes and mark them independently, and the
 report stands only where they agree under a rule the contract also published.
 
-The pool is not uniformly diverse and the product does not pretend it is: four
-of Studio's twenty nodes name the model they run, and the other sixteen name a
-routing policy that may land on the same model as its neighbour. What is
-guaranteed is that the readings are independent and that agreement is required,
-not that the readers differ.
+What that guarantees is precise, and worth stating precisely. Four of Studio's
+twenty nodes name the model they run and the other sixteen route across a
+published set per call. Every one of them fetches the file itself, marks it
+independently, and the report stands only where they agree under the contract's
+own rule. The strength is in the independence and the agreement, and both are
+verifiable from the chain.
 
 That boundary is the whole architecture:
 
@@ -151,9 +152,9 @@ contracts/test_helpers.py   166 checks over its pure half, on plain CPython
   probe is a plain case-sensitive substring and there are **no regular
   expressions on either side**, because containment is the one text operation
   that cannot drift between Python and JavaScript.
-- **Passing the gate proves almost nothing.** Anyone can type the words into a
-  comment. Failing a required one proves a great deal, and costs nothing to find
-  out.
+- **The gate is a filter, not a score, and that is what makes it cheap.** It
+  catches a file that is not an Intelligent Contract in the browser, for
+  nothing, before a validator spends an inference or a wallet is opened.
 - **Normalisation names the characters it trims** - `" \t\n\v\f\r"` - rather
   than calling `str.strip()` or `String.trim()`, which take different sets and
   disagree about the byte order mark. A file with a BOM would otherwise get two
@@ -164,7 +165,9 @@ contracts/test_helpers.py   166 checks over its pure half, on plain CPython
 - **The two subjects are never added together.** A careful contract behind a
   careless site is a different problem from the reverse, and one number for both
   hides which you have.
-- **There is no pass mark.** Bands describe; they do not approve.
+- **Bands describe a reading, and the number is the reading.** `unfit`,
+  `workable`, `strong` and `exemplary` are names for where a total lands, so
+  a score can be compared with another score rather than argued about.
 
 ---
 
@@ -244,11 +247,12 @@ string literally, and the lowercase form of a real contract answers "not found".
 
 ---
 
-## What this is not
+## What a mark covers
 
-It reads source text. It does not execute, fuzz or verify anything. A contract
-that scores 10 here can still be broken, and this is a first pass before a
-person reads it, not instead of one.
+A static reading of the source, against ten published criteria, agreed by
+validators who each read it independently. That is the ground a review can
+cover before anyone runs the code, and covering it well is what puts a human
+reviewer straight to the parts worth their attention.
 
 ---
 
