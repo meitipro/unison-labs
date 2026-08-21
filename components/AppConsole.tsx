@@ -63,7 +63,6 @@ type Phase =
      the source here: a gate verdict on screen while somebody is deciding
      whether to sign reads as the result, and the result is not in yet. */
   | { at: "signing"; gate: GateResult }
-  | { at: "gated"; gate: GateResult }
   | { at: "unreadable"; why: string }
   | { at: "working"; gate: GateResult; stage: Stage }
   | { at: "already"; gate: GateResult; reportId: number }
@@ -239,12 +238,31 @@ export default function AppConsole({
   const gate = "gate" in phase ? phase.gate : null;
   const ready = sourceUrl.trim().length > 0;
 
-  /* Everything from asking the wallet to the transaction actually leaving.
-     The gate result stays off screen for all of it: a row of green ticks
-     while somebody decides whether to sign reads as the verdict, and there
-     is no verdict yet. */
+  /* Everything from asking the wallet to the transaction actually leaving. */
   const awaitingSignature =
     phase.at === "signing" || (phase.at === "working" && phase.stage === "sending");
+
+  /*
+   * WHERE THE GATE RESULT IS ALLOWED TO APPEAR.
+   *
+   * Only beside something it explains: a refusal, where the missing markers
+   * are the whole reason, and a finished report, where it is one part of a
+   * result. It is off screen for every wait -- preparing, signing, and the
+   * run itself.
+   *
+   * During the run it was pure noise. Six green ticks and the word ELIGIBLE
+   * sat under a panel that said validators were still marking, so the screen
+   * showed a verdict-shaped thing while explaining that no verdict existed.
+   */
+  /* "Nothing has been scored yet" is true beside a refusal and false beside a
+     report, so the note under the gate follows this rather than the verdict. */
+  const hasReport = phase.at === "scored" || phase.at === "already";
+
+  const showGate =
+    phase.at === "refused" ||
+    phase.at === "scored" ||
+    phase.at === "split" ||
+    phase.at === "already";
 
   /* The header follows the phase, the way the design's `appTitle` does. */
   const title =
@@ -417,7 +435,7 @@ export default function AppConsole({
 
       {/* ---------------- the gate ------------------------------------ */}
       <div ref={resultRef}>
-        {gate && !awaitingSignature ? (
+        {gate && showGate ? (
           <div className="ws-panel">
             <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
               The gate
@@ -480,13 +498,17 @@ export default function AppConsole({
                 color: "var(--am)",
               }}
             >
-              {gate.eligible ? copy.GATE_PASSED_MEANS : copy.GATE_FAILED_MEANS}
+              {!gate.eligible
+                ? copy.GATE_FAILED_MEANS
+                : hasReport
+                  ? copy.GATE_BESIDE_REPORT
+                  : copy.GATE_PASSED_MEANS}
             </p>
 
-            {/* Only where a submission is still ahead: after a report exists,
-                or a refusal, this would be describing something that already
+            {/* Only while a submission is still ahead. Beside a finished
+                report it would be describing something that already
                 happened. */}
-            {gate.eligible && (phase.at === "gated" || phase.at === "refused") ? (
+            {gate.eligible && phase.at === "refused" ? (
               <p
                 style={{
                   margin: "10px 0 0",

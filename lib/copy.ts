@@ -100,6 +100,11 @@ export const SUBMIT_MEANS =
 export const CONNECT_AND_SUBMIT = "Connect a wallet and submit";
 export const CONNECTING = "Check your wallet";
 
+/* Beside a finished report the gate is a record of what was checked, not a
+   caveat about what has not happened yet. */
+export const GATE_BESIDE_REPORT =
+  "Presence checks, run here before the transaction and again by every validator on the agreed bytes. Passing them is not part of the score.";
+
 export const GATE_FAILED_MEANS =
   "Failing a required check proves a great deal, which is why the gate runs first. No validator spends an inference on this and nothing is charged.";
 
