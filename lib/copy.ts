@@ -75,6 +75,21 @@ export function poolFoot(routed: number, named: number): string {
   return `${named} nodes name the model they run - the other ${routed} run a routing policy that picks one of these per call, so what they ran is not published.`;
 }
 
+/**
+ * What the gate's verdict does and does not mean, said next to the verdict.
+ *
+ * The gate is six substring searches. It runs instantly, in this browser,
+ * before any wallet or transaction, and a row of green ticks looks exactly
+ * like a result. It is not one, and the asymmetry between passing and failing
+ * is the whole point of having it: passing is cheap to fake and failing is
+ * not.
+ */
+export const GATE_PASSED_MEANS =
+  "Presence checks only, and passing them proves almost nothing - the gate looks for six strings, and a comment containing them passes just as well as working code. Nothing has been scored yet.";
+
+export const GATE_FAILED_MEANS =
+  "Failing a required check proves a great deal, which is why the gate runs first. No validator spends an inference on this and nothing is charged.";
+
 export const CONSENSUS_EYEBROW = "Consensus";
 
 /**

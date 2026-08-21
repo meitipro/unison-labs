@@ -453,6 +453,27 @@ export default function AppConsole({
                 ? `eligible, ${gate.passed} of ${gate.total} present`
                 : `refused at the gate, missing ${fmt.ids(gate.missing)}`}
             </div>
+
+            {/*
+              WITHOUT THIS LINE, "eligible, 6 of 6 present" reads as a verdict.
+              It is not one. The gate looks for six strings and finds them, and
+              a comment containing the word `gl.nondet` passes it just as well
+              as real code does. Someone who runs this and sees a row of ticks
+              appear instantly, before any wallet or transaction, is entitled
+              to think a score just happened, and the asymmetry has to be on
+              the screen where the check runs rather than only on the landing.
+            */}
+            <p
+              style={{
+                margin: "12px 0 0",
+                maxWidth: "62ch",
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: "var(--am)",
+              }}
+            >
+              {gate.eligible ? copy.GATE_PASSED_MEANS : copy.GATE_FAILED_MEANS}
+            </p>
           </div>
         ) : null}
 
