@@ -1213,6 +1213,60 @@ textarea.ws-field {
 }
 
 /* --------------------------------------------------------------------------
+   Waiting: preparing, and the signature
+   --------------------------------------------------------------------------
+
+   Deliberately quiet. Neither of these is a result, and a panel that animates
+   hard reads as one arriving. A ring that turns, a line that says what is
+   being waited on, and nothing else.
+   -------------------------------------------------------------------------- */
+
+.ws-await {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.ws-await-ring {
+  flex: none;
+  margin-top: 2px;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--al2);
+  border-top-color: var(--am);
+  animation: unspin 900ms linear infinite;
+}
+
+.ws-await-ring[data-gold="true"] {
+  border-color: var(--agl);
+  border-top-color: var(--agold);
+}
+
+.ws-await-title {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--ai);
+}
+
+.ws-await-note {
+  margin: 8px 0 0;
+  max-width: 56ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--am);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-await-ring {
+    animation: none;
+    border-top-color: var(--agold);
+  }
+}
+
+/* --------------------------------------------------------------------------
    Toast
    -------------------------------------------------------------------------- */
 

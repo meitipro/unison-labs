@@ -53,6 +53,15 @@ import type { Report } from "../lib/types";
 
 type Phase =
   | { at: "idle" }
+  /* Between the press and the wallet. The browser is fetching the file,
+     running the gate and asking the chain whether these bytes already carry a
+     report -- a few seconds of real work that used to happen behind a screen
+     that looked idle, so the wallet appeared to pop up out of nowhere. */
+  | { at: "preparing" }
+  /* The wallet has been asked and has not answered. Nothing is shown about
+     the source here: a gate verdict on screen while somebody is deciding
+     whether to sign reads as the result, and the result is not in yet. */
+  | { at: "signing"; gate: GateResult }
   | { at: "gated"; gate: GateResult }
   | { at: "unreadable"; why: string }
   | { at: "working"; gate: GateResult; stage: Stage }
@@ -107,6 +116,8 @@ export default function AppConsole({
         return;
       }
 
+      setPhase({ at: "preparing" });
+
       let text = "";
       try {
         const response = await fetch(url, { headers: { Accept: "text/plain, */*" } });
@@ -147,7 +158,9 @@ export default function AppConsole({
       }
 
       // Only now is a signature needed. Connect on demand rather than gating
-      // the whole screen behind a wallet: the gate above was free and useful.
+      // the whole screen behind a wallet: everything above was free.
+      setPhase({ at: "signing", gate });
+
       let account = wallet.address;
       if (!account) {
         account = await wallet.connect();
@@ -222,6 +235,13 @@ export default function AppConsole({
   const gate = "gate" in phase ? phase.gate : null;
   const ready = sourceUrl.trim().length > 0;
 
+  /* Everything from asking the wallet to the transaction actually leaving.
+     The gate result stays off screen for all of it: a row of green ticks
+     while somebody decides whether to sign reads as the verdict, and there
+     is no verdict yet. */
+  const awaitingSignature =
+    phase.at === "signing" || (phase.at === "working" && phase.stage === "sending");
+
   /* The header follows the phase, the way the design's `appTitle` does. */
   const title =
     phase.at === "working"
@@ -245,7 +265,9 @@ export default function AppConsole({
       <WorkspaceHeader title={title} lede={lede} standard={rubric || undefined} />
 
       {/* ---------------- compose ------------------------------------- */}
-      {phase.at !== "working" ? (
+      {/* The form steps aside for anything in flight: preparing, waiting on
+          the signature, and the run itself. */}
+      {phase.at !== "working" && phase.at !== "preparing" && phase.at !== "signing" ? (
         <form className="ws-panel" onSubmit={submit}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
@@ -360,11 +382,18 @@ export default function AppConsole({
       ) : null}
 
       {/* ---------------- running ------------------------------------- */}
-      {phase.at === "working" ? <RunningPanel stage={phase.stage} /> : null}
+      {phase.at === "preparing" ? <PreparingPanel /> : null}
+      {/* `sending` is the stage where the wallet is holding the signature
+          request, so it belongs with signing rather than with the run: the
+          transaction does not exist until it is signed. */}
+      {awaitingSignature ? <SigningPanel /> : null}
+      {phase.at === "working" && phase.stage !== "sending" ? (
+        <RunningPanel stage={phase.stage} />
+      ) : null}
 
       {/* ---------------- the gate ------------------------------------ */}
       <div ref={resultRef}>
-        {gate ? (
+        {gate && !awaitingSignature ? (
           <div className="ws-panel">
             <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
               The gate
@@ -527,6 +556,49 @@ const STAGE_ORDER: Stage[] = ["sending", "sent", "fetching", "scoring", "accepte
  * This is a stage line and not a progress bar. Nothing reports how far into a
  * step consensus is, so nothing here pretends to.
  */
+/**
+ * The few seconds between the press and the wallet.
+ *
+ * Fetching the file, running the gate and asking the chain whether these bytes
+ * already carry a report is real work over a real network, and it used to
+ * happen behind a screen that still looked like a form. The wallet then
+ * appeared to pop up on its own, several seconds after the press, with no
+ * stated connection to it.
+ */
+function PreparingPanel() {
+  return (
+    <div className="ws-panel ws-await">
+      <span className="ws-await-ring" aria-hidden="true" />
+      <div>
+        <div className="ws-await-title">{copy.PREPARING_TITLE}</div>
+        <p className="ws-await-note">{copy.PREPARING_NOTE}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Waiting on the signature, and showing nothing else.
+ *
+ * THE GATE RESULT IS DELIBERATELY ABSENT HERE. A row of green ticks and the
+ * word ELIGIBLE, on screen while somebody is deciding whether to sign, reads
+ * as the verdict -- and the verdict does not exist yet. It appears with the
+ * report, where it is one part of a result rather than the whole of one.
+ */
+function SigningPanel() {
+  return (
+    <div className="ws-panel" data-tone="gold">
+      <div className="ws-await">
+        <span className="ws-await-ring" data-gold="true" aria-hidden="true" />
+        <div>
+          <div className="ws-await-title">{copy.SIGNING_TITLE}</div>
+          <p className="ws-await-note">{copy.SIGNING_NOTE}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RunningPanel({ stage }: { stage: Stage }) {
   const at = Math.min(Math.max(STAGE_ORDER.indexOf(stage), 0), 4);
   return (

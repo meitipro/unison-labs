@@ -361,6 +361,21 @@ export const RUN_STAGES = [
   "the report is being written on chain",
 ];
 
+/**
+ * The two waits before the run: preparing, then the signature.
+ *
+ * Both used to be silent. The press did several seconds of network work behind
+ * a screen that still looked like a form, and then the wallet appeared on its
+ * own with nothing on the page connecting it to what had been pressed.
+ */
+export const PREPARING_TITLE = "Reading the file";
+export const PREPARING_NOTE =
+  "Fetching the source, running the gate here, and asking the chain whether these exact bytes already carry a report. None of this costs anything.";
+
+export const SIGNING_TITLE = "Sign in your wallet";
+export const SIGNING_NOTE =
+  "One transaction, waiting on your signature. The validators fetch the file themselves once it lands, and nothing is charged if you decline.";
+
 export const RUN_EYEBROW = "Review in progress";
 export const RUN_NOTE =
   "Every validator fetches the source and marks it. Rotations are normal, so this takes minutes rather than seconds.";
