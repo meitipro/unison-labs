@@ -62,8 +62,6 @@ export const COUNTER_POOL = "Validators in the pool";
  * fallback list, which would be an assertion dressed as a reading.
  */
 export const POOL_LABEL = "Models this pool can draw on";
-export const POOL_UNKNOWN = "The node did not answer, so the pool is not shown.";
-
 /**
  * What the strip is, said underneath it.
  *
@@ -80,10 +78,10 @@ export function poolFoot(routed: number, named: number): string {
 export const CONSENSUS_EYEBROW = "Consensus";
 
 /**
- * The heading names the real pool size, so it cannot drift from the Validators
- * screen. The design said "a pool of a thousand" and the counter beside it said
- * 1,001; the network this runs on has twenty, and the workspace has always said
- * so. One of the two had to be reading rather than asserting.
+ * The heading names the real pool size, read with the same call the counter
+ * under the hero uses, so the two can never disagree. The design said "a pool
+ * of a thousand" and the counter beside it said 1,001; the network this runs
+ * on has twenty. One of the two had to be reading rather than asserting.
  */
 export function consensusHeading(poolSize: number | null): string {
   if (poolSize === null) return "Several readings, one agreed number";
@@ -316,24 +314,9 @@ export const PANE_REPORTS_LEDE =
   "Every report this contract has issued, newest first.";
 export const PANE_REPORTS_NOTE =
   "A suspended review is kept beside a finalized one, because a split is a finding about the rubric and not a failed run.";
-export const PANE_VALIDATORS_TITLE = "Validators";
-export const PANE_VALIDATORS_LEDE =
-  "The pool this network draws a jury from, and what each node is running.";
 export const PANE_SETTINGS_TITLE = "Settings";
 export const PANE_SETTINGS_LEDE =
   "The rubric, the network, the wallet and how this workspace looks.";
-
-/**
- * Why no per-validator mark is shown.
- *
- * The single most load-bearing sentence in the workspace: the design draws five
- * nodes each with its own score, and that number does not exist at any layer.
- */
-export const VALIDATORS_NO_MARKS =
-  "A validator's vote is one bit - it agrees with the leader's result or it does not - so no per-node mark exists to show, here or in the contract. What the network publishes is who is in the pool and what they run.";
-
-export const POOL_UNREADABLE =
-  "The node did not answer, so the pool is unknown rather than empty.";
 
 /**
  * The five lines of the running panel.

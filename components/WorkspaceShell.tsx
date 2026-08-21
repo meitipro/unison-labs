@@ -4,11 +4,11 @@
  * The workspace shell: the rail, the handle that resizes it, and the header row
  * every pane shares.
  *
- * THE PANES ARE ROUTES, not a `pane` flag in state. `/app`, `/app/reports`,
- * `/app/validators` and `/app/settings` each get a url, a back button, a
- * bookmark and a shareable link, none of which a state toggle has. It also
- * means the rail can mark the current one with `aria-current` for free, and
- * each pane can be a server component that reads the chain.
+ * THE PANES ARE ROUTES, not a `pane` flag in state. `/app`, `/app/reports`
+ * and `/app/settings` each get a url, a back button, a bookmark and a
+ * shareable link, none of which a state toggle has. It also means the rail can
+ * mark the current one with `aria-current` for free, and each pane can be a
+ * server component that reads the chain.
  *
  * The rail has two modes and THE STYLESHEET decides which:
  *
@@ -81,17 +81,6 @@ const NAV = [
       <>
         <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
         <path d="M14 3v5h5" />
-      </>
-    ),
-  },
-  {
-    href: "/app/validators",
-    label: "Validators",
-    icon: (
-      <>
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       </>
     ),
   },
