@@ -1,5 +1,5 @@
 /**
- * The landing, from `Unison Nocturne.dc.html`.
+ * The landing, from the Nocturne design.
  *
  * Section for section: hero over the slab, the named-model strip, story,
  * consensus, machinery, result, record, close, footer.

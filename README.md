@@ -175,8 +175,8 @@ run.
 
 ### Every number on screen is one the product can stand behind
 
-The interface is ported from a Claude Design project, and a design file is
-allowed to invent. A live page is not. The mockup filled its panels with 9/10,
+The interface is ported from a design file, and a design file is allowed to
+invent. A live page is not. The mockup filled its panels with 9/10,
 report 8812 and digest `4f2a91c0`, listed eight plausible model names in its
 validator marquee, and put a pool of 1,001 under the hero.
 

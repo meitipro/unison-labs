@@ -30,3 +30,6 @@ Thumbs.db
 # python bytecode
 __pycache__/
 *.py[cod]
+
+# local tooling
+.claude/

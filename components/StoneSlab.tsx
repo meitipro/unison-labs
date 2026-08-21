@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The slab, ported from the design project's `stone.js`.
+ * The slab, ported from the design's `stone.js`.
  *
  * A three.js block of stone with a streak rubbed across it and three reference
  * streaks of known purity below, which is the object the whole product is named

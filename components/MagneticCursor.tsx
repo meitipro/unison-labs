@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The magnetic pointer, ported from the design project's `magnetic-cursor.js`.
+ * The magnetic pointer, ported from the design's `magnetic-cursor.js`.
  *
  * A white dot under `mix-blend-mode: exclusion` that follows the pointer,
  * stretches into an I-beam over running text, wraps whatever button or link it
