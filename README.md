@@ -40,10 +40,11 @@ one produces LF, and the same commit yields two different digests.
 
 ## Overview
 
-Point Unison at a GenLayer contract. Validators fetch the raw file themselves,
-agree on the bytes, and mark it out of ten against a rubric the contract
-published before it had ever scored anything. Give it the product's site too and
-the site gets its own ten, kept separate and never averaged into the first.
+Point Unison at a GenLayer contract, and the validators fetch the raw file
+themselves, agree on the bytes, and mark it out of ten against a rubric the
+contract published before it had ever scored anything, with the product's site
+getting its own ten if you give one, kept separate and never averaged into the
+first.
 
 The result is drawn as a gold streak on dark stone, its length the score, read
 against reference marks at 4, 7 and 9 like an assay card.
@@ -58,8 +59,8 @@ be re-explained after the fact by moving the standard it was measured against.
 **Whether a mark is counted or judged is published per criterion.** Four of the
 five contract criteria are derived in deterministic code from the agreed bytes,
 so every validator reaches the same number and the same reason without spending
-an inference. The rest go to the jury. The rubric page says which is which, and
-so does `rubric()`.
+an inference, and the rest go to the jury, with the rubric page and `rubric()`
+both saying which is which.
 
 ---
 
@@ -75,11 +76,11 @@ so does `rubric()`.
 | 6 | They mark it | Counted criteria in deterministic code, judged criteria by inference, against anchors published in advance |
 | 7 | The contract sums and bands | Arithmetic, in the contract. No model is ever asked for a total |
 
-Where the jury does not land on the same answer, **no report is issued at all**.
-The contract does not average a disagreement into a number that nobody voted
-for. It suspends the review and lets a separate transaction ask which anchor
-failed to separate two careful markers, because that is a finding about the
-rubric rather than a failed run.
+Where the jury does not land on the same answer, **no report is issued at all**,
+because averaging a disagreement produces a number nobody voted for, so the
+review is suspended and a separate transaction asks which anchor failed to
+separate two careful markers, that being a finding about the rubric rather than
+a failed run.
 
 ---
 
@@ -89,25 +90,26 @@ The contract does not use a model as a backend. It uses one where **a judgement
 has to be trusted by somebody who did not make it**.
 
 A score on a contract is worth exactly what the reader thinks of whoever
-produced it. Run it through one model behind one API key and you have an
-opinion with a logo on it. Here the rubric is public before anything is scored,
-several validators read the same bytes and mark them independently, and the
-report stands only where they agree under a rule the contract also published.
+produced it, so run it through one model behind one API key and you have an
+opinion with a logo on it, whereas here the rubric is public before anything is
+scored, several validators read the same bytes and mark them independently, and
+the report stands only where they agree under a rule the contract also
+published.
 
-What that guarantees is precise, and worth stating precisely. Four of Studio's
+What that guarantees is precise and worth stating precisely: four of Studio's
 twenty nodes name the model they run and the other sixteen route across a
-published set per call. Every one of them fetches the file itself, marks it
+published set per call, every one of them fetches the file itself and marks it
 independently, and the report stands only where they agree under the contract's
-own rule. The strength is in the independence and the agreement, and both are
-verifiable from the chain.
+own rule, so the strength is in the independence and the agreement, both of
+them verifiable from the chain.
 
 That boundary is the whole architecture:
 
 - **The contract owns** the rubric, the anchors, the gate probes, the bands, the
   counted-versus-judged split, the agreement rule, the arithmetic and the record.
-- **The browser owns** the fetch, the gate, the digest and every screen. It can
-  refuse a submission but it can never produce a mark.
-- **The validators own** the reading. They fetch the source themselves, so the
+- **The browser owns** the fetch, the gate, the digest and every screen, so it
+  can refuse a submission but never produce a mark.
+- **The validators own** the reading, fetching the source themselves, so the
   file they mark is the file the report is about.
 
 ---
@@ -115,10 +117,10 @@ That boundary is the whole architecture:
 ## The thing that nearly sank it
 
 Asking a model for five 0/1/2 scores and requiring the jury to agree exactly
-**never settles**. Not rarely. Three markings of one source from a single node
-came back `[0,2,0,1,0]`, `[0,2,0,2,0]` and `[0,2,0,0,1]` - the band itself
-flipped between runs of the same model on the same bytes. Bare equality settled
-**0 of 3** assays, and widening the tolerance changed nothing.
+**never settles**, not rarely, and three markings of one source from a single
+node came back `[0,2,0,1,0]`, `[0,2,0,2,0]` and `[0,2,0,0,1]`, the band itself
+flipping between runs of the same model on the same bytes, so bare equality
+settled **0 of 3** assays and widening the tolerance changed nothing.
 
 The fix was not a bigger tolerance. It was deciding, per criterion, whether the
 question was one a count could answer:
@@ -129,8 +131,8 @@ question was one a count could answer:
 | `judgment` | `necessity`, and all five site criteria |
 
 The counted four are read out of the agreed bytes in deterministic code, so
-every validator derives them identically by construction. The same source
-settled on the first try afterwards. The measurements are in
+every validator derives them identically by construction, and the same source
+settled on the first try afterwards, with the measurements in
 [docs/judgment-layer.md](docs/judgment-layer.md).
 
 ---
@@ -149,17 +151,17 @@ contracts/test_helpers.py   166 checks over its pure half, on plain CPython
 ### Behaviour worth knowing
 
 - **The gate is published, not just implemented.** `gate_spec()` returns the
-  probes, so the browser runs the *chain's* gate rather than a copy of it. Every
-  probe is a plain case-sensitive substring and there are **no regular
-  expressions on either side**, because containment is the one text operation
-  that cannot drift between Python and JavaScript.
+  probes, so the browser runs the *chain's* gate rather than a copy of it, and
+  every probe is a plain case-sensitive substring with **no regular expressions
+  on either side**, containment being the one text operation that cannot drift
+  between Python and JavaScript.
 - **The gate is a filter, not a score, and that is what makes it cheap.** It
   catches a file that is not an Intelligent Contract in the browser, for
   nothing, before a validator spends an inference or a wallet is opened.
 - **Normalisation names the characters it trims** - `" \t\n\v\f\r"` - rather
   than calling `str.strip()` or `String.trim()`, which take different sets and
-  disagree about the byte order mark. A file with a BOM would otherwise get two
-  different digests and the browser would look up a report filed under a key
+  disagree about the byte order mark, so a file with a BOM would otherwise get
+  two different digests and the browser would look up a report filed under a key
   nobody wrote to.
 - **Untrusted source text is fenced at the prompt boundary**, angle brackets
   replaced, so a contract cannot address the validator reading it.
@@ -181,36 +183,35 @@ run.
 ### Every number on screen is one the product can stand behind
 
 The interface is ported from a design file, and a design file is allowed to
-invent. A live page is not. The mockup filled its panels with 9/10,
+invent where a live page is not, so the mockup filled its panels with 9/10,
 report 8812 and digest `4f2a91c0`, listed eight plausible model names in its
 validator marquee, and put a pool of 1,001 under the hero.
 
-All of it now reads. The counters show what the contract has issued, what the
+All of it now reads: the counters show what the contract has issued, what the
 rubric publishes, what a refusal costs, and the pool size that
-`sim_getAllValidators` reports - the same call the Validators screen uses, so
-the two can never disagree. The marquee lists the model families actually in the
-pool. Where the node does not answer there is no marquee, because a hardcoded
-list of plausible models is an assertion dressed as a reading.
+`sim_getAllValidators` reports, the same call the workspace uses so the two can
+never disagree, while the strip lists the models actually reachable in the pool
+and disappears entirely where the node does not answer, a hardcoded list of
+plausible models being an assertion dressed as a reading.
 
 **Three states are kept apart everywhere**: a real mark, an empty contract, and
-*the node did not answer*. A null from a rate-limited read is never rendered as
-a zero.
+*the node did not answer*, so a null from a rate-limited read is never rendered
+as a zero.
 
 ### What a validator's vote actually is
 
-One bit. It agrees with the leader's result or it does not, and that aggregate
-is all the receipt or the contract ever carries. So there is **no per-node mark
-to display** - not on the landing, not on a report, not anywhere. The design
-drew five nodes each holding a 9; where they were, the site now shows the
-agreement rule the contract publishes, read off the chain, which is the thing
-the sentence above it is actually claiming.
+One bit, agreeing with the leader's result or not, and that aggregate is all
+the receipt or the contract ever carries, so there is **no per-node mark to
+display** anywhere. The design drew five nodes each holding a 9, and where they
+were the site now shows the agreement rule the contract publishes, read off the
+chain, which is the thing the sentence above it is actually claiming.
 
 ### Nothing is announced before the chain has settled
 
-A GenLayer receipt carries three fields that all read like a verdict, and two of
-them lie. `status` is `FINALIZED` on a refused call, because refusing is a
-perfectly successful transaction. `result` is `MAJORITY_AGREE`, because
-validators agreeing that a call failed is still agreement. Only
+A GenLayer receipt carries three fields that all read like a verdict and two of
+them lie: `status` is `FINALIZED` on a refused call because refusing is a
+perfectly successful transaction, and `result` is `MAJORITY_AGREE` because
+validators agreeing that a call failed is still agreement, so only
 `consensus_data.leader_receipt[].execution_result` answers "did my code run".
 
 Every write asserts that field, waits for finality by polling the node directly,
@@ -232,8 +233,8 @@ npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```
 
-The site works with **no contract configured**. Every screen that would show a
-mark says so instead. It never invents one.
+The site works with **no contract configured**, and every screen that would show
+a mark says so instead of inventing one.
 
 ### Deploying your own
 
