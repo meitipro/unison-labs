@@ -1,6 +1,6 @@
 # Line endings are part of this project's correctness, not a style preference.
 #
-# `npm run match` compares contracts/touchstone.py byte for byte against what
+# `npm run match` compares contracts/unison.py byte for byte against what
 # is deployed on chain. With git left to its own devices that comparison is
 # platform dependent: core.autocrlf rewrites the file to CRLF on a Windows
 # checkout and LF everywhere else, so the same commit produces two different

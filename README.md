@@ -12,8 +12,8 @@ scored, and judged by the network rather than by us.
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-101216?style=flat-square)](https://nextjs.org)
 [![MIT](https://img.shields.io/badge/license-MIT-101216?style=flat-square)](LICENSE)
 
-**[Open the live site](https://unisonlabs.tech)** &nbsp;.&nbsp;
-[Run a review](https://unisonlabs.tech/app) &nbsp;.&nbsp;
+**[Open the live site](https://unisonlabs.tech)** &nbsp;-&nbsp;
+[Run a review](https://unisonlabs.tech/app) &nbsp;-&nbsp;
 [Read the rubric](https://unisonlabs.tech/rubric)
 
 </div>
@@ -29,7 +29,7 @@ scored, and judged by the network rather than by us.
 | Rubric | v1, frozen by the transaction that deployed the contract |
 
 `npm run match -- 0x39532a73F2A66552bDfE7813bF4273c02F547762` checks the
-deployed bytes against `contracts/touchstone.py` byte for byte.
+deployed bytes against `contracts/unison.py` byte for byte.
 
 Line endings are pinned to LF in `.gitattributes` precisely so that check is
 not platform dependent: without it a Windows checkout produces CRLF, a Linux
@@ -140,7 +140,7 @@ concrete runner hash. `npm run match -- 0x...` compares the deployed bytes again
 the file on disk, byte for byte.
 
 ```
-contracts/touchstone.py     the gate, the rubric, the marks, the reports, the splits
+contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
 contracts/test_helpers.py   166 checks over its pure half, on plain CPython
 ```
 

@@ -1,10 +1,10 @@
 """
-Run the pure half of contracts/touchstone.py on plain CPython.
+Run the pure half of contracts/unison.py on plain CPython.
 
     python contracts/test_helpers.py            # human output
     python contracts/test_helpers.py --json     # parity report for node
 
-Everything above the "The non-deterministic rounds" banner in touchstone.py is a
+Everything above the "The non-deterministic rounds" banner in unison.py is a
 pure function of its arguments: the normalisation, the digest, the gate, the
 bands, the fence, the prompt builder and the whole ballot parser. None of it
 needs a GenVM, a network or a deployment, which matters because genlayer-test
@@ -30,7 +30,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
-SOURCE = HERE / "touchstone.py"
+SOURCE = HERE / "unison.py"
 FIXTURES = ROOT / "public" / "fixtures"
 
 MARKER = "# The non-deterministic rounds."
@@ -395,7 +395,7 @@ check_true(
 check(
     "clipping marks the clip",
     M["clip"]("abcdef", 3),
-    "abc\n[clipped by touchstone]",
+    "abc\n[clipped by unison]",
 )
 check("clipping under the limit is a no-op", M["clip"]("ab", 3), "ab")
 
@@ -858,5 +858,5 @@ if FAILURES:
         print(f"   x {failure}\n")
     raise SystemExit(1)
 
-print(f"  {CHECKS} checks passed  (contracts/touchstone.py, pure half)")
+print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()

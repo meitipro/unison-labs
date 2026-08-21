@@ -23,11 +23,11 @@ import * as fmt from "../../../lib/format";
 import {
   IS_LIVE,
   NETWORK_LABEL,
-  TOUCHSTONE,
+  CONTRACT,
   explorerAddress,
   HAS_EXPLORER,
 } from "../../../lib/chain";
-import { getReport, getRubric } from "../../../lib/touchstone";
+import { getReport, getRubric } from "../../../lib/unison";
 
 export const revalidate = 30;
 
@@ -181,11 +181,11 @@ export default async function ReportPage({ params }: Params) {
           <span className="kv-key">contract</span>
           <span className="kv-val">
             {HAS_EXPLORER ? (
-              <a href={explorerAddress(TOUCHSTONE)} target="_blank" rel="noreferrer">
-                {fmt.address(TOUCHSTONE)}
+              <a href={explorerAddress(CONTRACT)} target="_blank" rel="noreferrer">
+                {fmt.address(CONTRACT)}
               </a>
             ) : (
-              fmt.address(TOUCHSTONE)
+              fmt.address(CONTRACT)
             )}{" "}
             <span className="dim"> - {NETWORK_LABEL}</span>
           </span>

@@ -2,7 +2,7 @@
  * The gate, in the browser. Step one, and it costs nothing.
  *
  * This is a deliberate twin of `normalise`, `digest_of` and `gate_of` in
- * contracts/touchstone.py. It exists so a refusal never becomes a transaction:
+ * contracts/unison.py. It exists so a refusal never becomes a transaction:
  * a file with no runner header and no non-deterministic call is not an
  * Intelligent Contract, and finding that out should not cost a validator an
  * inference.

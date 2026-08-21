@@ -5,7 +5,7 @@ import { WorkspaceHeader } from "../../../../components/WorkspaceShell";
 import * as copy from "../../../../lib/copy";
 import * as fmt from "../../../../lib/format";
 import { IS_LIVE, NETWORK_LABEL } from "../../../../lib/chain";
-import { getRecentReports, getSplitTable, getStats } from "../../../../lib/touchstone";
+import { getRecentReports, getSplitTable, getStats } from "../../../../lib/unison";
 
 export const metadata: Metadata = {
   title: "Reports - Unison",
@@ -46,7 +46,7 @@ export default async function ReportsPane() {
         <div className="ws-panel">
           <p className="ws-note" style={{ margin: 0 }}>
             No contract is configured for {NETWORK_LABEL}, so there is nothing to list. Deploy one
-            and set NEXT_PUBLIC_TOUCHSTONE_ADDRESS.
+            and set NEXT_PUBLIC_UNISONLABS_ADDRESS.
           </p>
         </div>
       ) : stats === null ? (

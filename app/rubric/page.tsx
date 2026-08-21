@@ -20,9 +20,9 @@ import type { Metadata } from "next";
 import SiteHeader from "../../components/SiteHeader";
 
 import * as copy from "../../lib/copy";
-import { IS_LIVE, TOUCHSTONE, explorerAddress, HAS_EXPLORER, NETWORK_LABEL } from "../../lib/chain";
+import { IS_LIVE, CONTRACT, explorerAddress, HAS_EXPLORER, NETWORK_LABEL } from "../../lib/chain";
 import * as fmt from "../../lib/format";
-import { getRubric, getSplitTable, getStats } from "../../lib/touchstone";
+import { getRubric, getSplitTable, getStats } from "../../lib/unison";
 
 export const metadata: Metadata = {
   title: "The rubric - Unison",
@@ -88,11 +88,11 @@ export default async function RubricPage() {
               <span className="kv-key">contract</span>
               <span className="kv-val">
                 {HAS_EXPLORER && IS_LIVE ? (
-                  <a href={explorerAddress(TOUCHSTONE)} target="_blank" rel="noreferrer">
-                    {TOUCHSTONE}
+                  <a href={explorerAddress(CONTRACT)} target="_blank" rel="noreferrer">
+                    {CONTRACT}
                   </a>
                 ) : (
-                  TOUCHSTONE || "not configured"
+                  CONTRACT || "not configured"
                 )}{" "}
                 <span className="dim"> - {NETWORK_LABEL}</span>
               </span>

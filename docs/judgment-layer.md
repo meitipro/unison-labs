@@ -1,7 +1,7 @@
 # The judgment layer, and what measuring it changed
 
 Everything here was measured on Studio against a deployed contract. It is kept
-out of `contracts/touchstone.py` because on-chain bytes are a real cost and a
+out of `contracts/unison.py` because on-chain bytes are a real cost and a
 build diary is not part of the published standard - the contract keeps the
 rules, this file keeps the reasoning.
 

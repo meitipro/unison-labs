@@ -26,7 +26,7 @@ if (!file) {
 }
 
 const code = readFileSync(resolve(file), "utf8");
-const key = process.env.TOUCHSTONE_DEPLOYER_KEY || `0x${randomBytes(32).toString("hex")}`;
+const key = process.env.UNISONLABS_DEPLOYER_KEY || `0x${randomBytes(32).toString("hex")}`;
 const account = createAccount(key);
 const client = createClient({ chain: studionet, account });
 

@@ -17,7 +17,7 @@ import {
   Abort, clientFor, die, flag, outcomeOf, requireKey, waitFinal, writeWithRetry,
 } from "./chain.mjs";
 
-const address = getAddress(flag("contract", process.env.NEXT_PUBLIC_TOUCHSTONE_ADDRESS || ""));
+const address = getAddress(flag("contract", process.env.NEXT_PUBLIC_UNISONLABS_ADDRESS || ""));
 const source = flag(
   "source",
   "https://raw.githubusercontent.com/genlayerlabs/genlayer-project-boilerplate/main/contracts/football_bets.py",
@@ -26,7 +26,7 @@ const site = flag("site", "");
 const times = Number(flag("times", "3"));
 if (!address) die("Pass --contract=0x...");
 
-const { client } = clientFor(requireKey("TOUCHSTONE_DEPLOYER_KEY"));
+const { client } = clientFor(requireKey("UNISONLABS_DEPLOYER_KEY"));
 const results = [];
 
 console.log(`\n  marking ${source}\n  against ${address}\n`);

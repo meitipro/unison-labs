@@ -10,7 +10,7 @@
  *     child process inherits, so the child needs PYTHONIOENCODING=utf-8.
  *  2. Never spawn it through a shell. These repos live under "GenLayer Works"
  *     and the shell splits the path on the space, so the linter reports
- *     `unrecognized arguments: Works\...\touchstone.py` for every file.
+ *     `unrecognized arguments: Works\...\unison.py` for every file.
  *
  * `check` runs both halves: the AST pass, and the deeper one that loads the
  * contract against the SDK.
@@ -20,7 +20,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CONTRACT = join(HERE, "..", "contracts", "touchstone.py");
+const CONTRACT = join(HERE, "..", "contracts", "unison.py");
 
 const result = spawnSync("genvm-lint", ["check", CONTRACT], {
   stdio: "inherit",

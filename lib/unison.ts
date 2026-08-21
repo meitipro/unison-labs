@@ -14,7 +14,7 @@ import { cache } from "react";
 
 import { createClient } from "genlayer-js";
 
-import { CHAIN, IS_LIVE, TOUCHSTONE } from "./chain";
+import { CHAIN, IS_LIVE, CONTRACT } from "./chain";
 import type { Report, Rubric, SplitRow, Stats } from "./types";
 
 /** A read-only client. No account, so nothing here can ever sign anything. */
@@ -66,7 +66,7 @@ async function read(functionName: string, args: unknown[] = [], attempts = 4) {
     for (let i = 1; i <= attempts; i += 1) {
       try {
         const out = await client.readContract({
-          address: TOUCHSTONE as `0x${string}`,
+          address: CONTRACT as `0x${string}`,
           functionName,
           args: args as never,
         });

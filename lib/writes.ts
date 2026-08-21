@@ -19,7 +19,7 @@
 import { createClient } from "genlayer-js";
 import type { Hash } from "genlayer-js/types";
 
-import { CHAIN, RPC_URL, TOUCHSTONE } from "./chain";
+import { CHAIN, RPC_URL, CONTRACT } from "./chain";
 import type { Eip1193Provider as EthereumProvider } from "./eip6963";
 
 // Pure text, kept apart so its rules can be tested without an RPC client.
@@ -256,7 +256,7 @@ async function send(
   for (let i = 1; i <= attempts; i += 1) {
     try {
       return await client.writeContract({
-        address: TOUCHSTONE as `0x${string}`,
+        address: CONTRACT as `0x${string}`,
         functionName,
         args: args as never,
         // Nothing here is payable. The contract has no way to move value out

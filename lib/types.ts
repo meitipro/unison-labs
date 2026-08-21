@@ -7,7 +7,7 @@
  * bearing forever. These types describe what comes out of `JSON.parse`.
  *
  * Nothing here is a source of truth. If a field disagrees with
- * contracts/touchstone.py, the contract is right.
+ * contracts/unison.py, the contract is right.
  */
 
 export type Anchor = string;

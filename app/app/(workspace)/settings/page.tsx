@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { WorkspaceHeader } from "../../../../components/WorkspaceShell";
 import SettingsRows from "../../../../components/SettingsRows";
 import * as copy from "../../../../lib/copy";
-import { getStats } from "../../../../lib/touchstone";
+import { getStats } from "../../../../lib/unison";
 
 export const metadata: Metadata = {
   title: "Settings - Unison",

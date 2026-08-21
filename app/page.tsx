@@ -19,8 +19,8 @@ import Machinery from "../components/Machinery";
 import Streak from "../components/Streak";
 import * as copy from "../lib/copy";
 import * as fmt from "../lib/format";
-import { IS_LIVE, NETWORK_LABEL, TOUCHSTONE, explorerAddress, HAS_EXPLORER } from "../lib/chain";
-import { getNewestReport, getRubric, getStats } from "../lib/touchstone";
+import { IS_LIVE, NETWORK_LABEL, CONTRACT, explorerAddress, HAS_EXPLORER } from "../lib/chain";
+import { getNewestReport, getRubric, getStats } from "../lib/unison";
 import { allModels, commitment, getPool } from "../lib/validators";
 
 export const revalidate = 60;
@@ -348,11 +348,11 @@ export default async function LandingPage() {
                   <span className="kv-val">
                     {newest.rubric} at{" "}
                     {HAS_EXPLORER && IS_LIVE ? (
-                      <a href={explorerAddress(TOUCHSTONE)} target="_blank" rel="noreferrer">
-                        {fmt.address(TOUCHSTONE)}
+                      <a href={explorerAddress(CONTRACT)} target="_blank" rel="noreferrer">
+                        {fmt.address(CONTRACT)}
                       </a>
                     ) : (
-                      fmt.address(TOUCHSTONE)
+                      fmt.address(CONTRACT)
                     )}
                   </span>
                 </div>

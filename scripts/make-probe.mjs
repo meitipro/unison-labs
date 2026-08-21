@@ -1,5 +1,5 @@
 /**
- * Generate a measurement probe from contracts/touchstone.py.
+ * Generate a measurement probe from contracts/unison.py.
  *
  *   node scripts/make-probe.mjs
  *
@@ -28,9 +28,9 @@ const ROOT = join(HERE, "..");
 
 const MARKER = "# The non-deterministic rounds.";
 
-const source = readFileSync(join(ROOT, "contracts", "touchstone.py"), "utf8");
+const source = readFileSync(join(ROOT, "contracts", "unison.py"), "utf8");
 const cut = source.indexOf(MARKER);
-if (cut < 0) throw new Error("touchstone.py no longer has the banner make-probe.mjs cuts at");
+if (cut < 0) throw new Error("unison.py no longer has the banner make-probe.mjs cuts at");
 
 // Keep everything up to the banner, minus the trailing block comment lines.
 let head = source.slice(0, cut);

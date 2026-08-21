@@ -1,10 +1,10 @@
 /**
- * Deploy one Touchstone contract.
+ * Deploy one Unison contract.
  *
- *   $env:TOUCHSTONE_DEPLOYER_KEY = "0x..."     # PowerShell
+ *   $env:UNISONLABS_DEPLOYER_KEY = "0x..."     # PowerShell
  *   npm run deploy -- --yes
  *
- * The rubric and the gate are compiled into contracts/touchstone.py and no
+ * The rubric and the gate are compiled into contracts/unison.py and no
  * method anywhere in it can edit a criterion, an anchor, a probe or a band.
  * "Published before anyone was scored" has to mean something, and what it means
  * is that this transaction is the last moment any of it can change.
@@ -33,19 +33,19 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
-const CONTRACT = join(ROOT, "contracts", "touchstone.py");
+const CONTRACT = join(ROOT, "contracts", "unison.py");
 
 function python() {
   return process.platform === "win32" ? "python" : "python3";
 }
 
 async function main() {
-  const key = requireKey("TOUCHSTONE_DEPLOYER_KEY");
+  const key = requireKey("UNISONLABS_DEPLOYER_KEY");
   const code = readFileSync(CONTRACT, "utf8");
 
   if (!code.startsWith('# { "Depends": "py-genlayer:')) {
     die(
-      "contracts/touchstone.py does not start with a pinned runner header.\n" +
+      "contracts/unison.py does not start with a pinned runner header.\n" +
         "  Every GenLayer network rejects test, latest and unversioned runners.",
     );
   }
@@ -65,7 +65,7 @@ async function main() {
 
   const { chain, account, client } = clientFor(key);
 
-  console.log("  contract     contracts/touchstone.py");
+  console.log("  contract     contracts/unison.py");
   console.log(`  bytes        ${code.length.toLocaleString("en-US")}`);
   console.log(`  network      ${chain.name} (chain ${chain.id})`);
   console.log(`  rpc          ${chain.rpcUrls.default.http[0]}`);
@@ -98,7 +98,7 @@ async function main() {
   // and the lowercase form of a real contract answers "not found".
   console.log(`\n  contract     ${address}\n`);
   console.log("  Point the site at it, then restart the dev server:");
-  console.log(`    NEXT_PUBLIC_TOUCHSTONE_ADDRESS=${address}`);
+  console.log(`    NEXT_PUBLIC_UNISONLABS_ADDRESS=${address}`);
   console.log("");
   console.log("  NEXT_PUBLIC_ variables are inlined at build time, so setting this in");
   console.log("  a hosting dashboard does nothing until the next redeploy.");

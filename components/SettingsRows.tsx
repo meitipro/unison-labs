@@ -27,7 +27,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 
 import { useToast } from "./Toaster";
-import { NETWORK_LABEL, REQUIRES_GAS, TOUCHSTONE, explorerAddress, HAS_EXPLORER } from "../lib/chain";
+import { NETWORK_LABEL, REQUIRES_GAS, CONTRACT, explorerAddress, HAS_EXPLORER } from "../lib/chain";
 import { FAUCET_GEN, HAS_PROGRAMMATIC_FAUCET, SYMBOL, formatUnits, requestFunds } from "../lib/funds";
 import { usePrefs } from "../lib/prefs";
 import { readableError } from "../lib/voice";
@@ -81,19 +81,19 @@ export default function SettingsRows({
         <div>
           <h2>Contract</h2>
           <p>
-            {TOUCHSTONE
+            {CONTRACT
               ? `Reports are written to and read from this contract${reports === null ? "." : `, which has issued ${reports}.`}`
               : "No contract is configured, so every panel that would show a mark says so instead."}
           </p>
         </div>
         <div className="mono" style={{ fontSize: 11.5, whiteSpace: "nowrap", color: "var(--ag)" }}>
-          {TOUCHSTONE ? (
+          {CONTRACT ? (
             HAS_EXPLORER ? (
-              <a href={explorerAddress(TOUCHSTONE)} target="_blank" rel="noreferrer noopener" style={{ color: "var(--ag)" }}>
-                {shortAddress(TOUCHSTONE)}
+              <a href={explorerAddress(CONTRACT)} target="_blank" rel="noreferrer noopener" style={{ color: "var(--ag)" }}>
+                {shortAddress(CONTRACT)}
               </a>
             ) : (
-              shortAddress(TOUCHSTONE)
+              shortAddress(CONTRACT)
             )
           ) : (
             "not set"

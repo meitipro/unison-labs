@@ -1,5 +1,5 @@
 /**
- * Prove a deployed Touchstone actually works, on a real network.
+ * Prove a deployed Unison actually works, on a real network.
  *
  *   npm run verify -- --contract=0x...
  *   npm run verify -- --contract=0x... --source=https://raw.../c.py --site=https://x.test
@@ -114,9 +114,9 @@ const GATE_CASES = [
 ];
 
 async function main() {
-  const address = getAddress(flag("contract", process.env.NEXT_PUBLIC_TOUCHSTONE_ADDRESS || ""));
-  if (!address) die("Pass --contract=0x... or set NEXT_PUBLIC_TOUCHSTONE_ADDRESS.");
-  const key = requireKey("TOUCHSTONE_DEPLOYER_KEY");
+  const address = getAddress(flag("contract", process.env.NEXT_PUBLIC_UNISONLABS_ADDRESS || ""));
+  if (!address) die("Pass --contract=0x... or set NEXT_PUBLIC_UNISONLABS_ADDRESS.");
+  const key = requireKey("UNISONLABS_DEPLOYER_KEY");
   const { chain, account, client } = clientFor(key);
 
   const read = (functionName, args = []) =>

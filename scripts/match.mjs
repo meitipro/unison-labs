@@ -4,7 +4,7 @@
  *   npm run match -- 0x...
  *
  * Worth one call before trusting anything a live contract says. Editing
- * contracts/touchstone.py invalidates the deployment silently -- the site keeps
+ * contracts/unison.py invalidates the deployment silently -- the site keeps
  * reading the old address, every view still answers, and the answers are from
  * code that no longer exists in the repo.
  */
@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { pickChain } from "./chain.mjs";
 
 const address = process.argv[2];
-const local = readFileSync("contracts/touchstone.py", "utf8");
+const local = readFileSync("contracts/unison.py", "utf8");
 
 const r = await fetch(pickChain().rpcUrls.default.http[0], {
   method: "POST", headers: { "Content-Type": "application/json" },

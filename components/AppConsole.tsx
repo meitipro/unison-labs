@@ -40,7 +40,7 @@ import {
   type GateResult,
   type GateSpec,
 } from "../lib/gate";
-import { getGateSpec, getReportByDigest, getSplitForDigest } from "../lib/touchstone";
+import { getGateSpec, getReportByDigest, getSplitForDigest } from "../lib/unison";
 import { useWallet } from "../lib/wallet";
 import { readableError } from "../lib/voice";
 import { assay, type Outcome, type Stage, type Votes } from "../lib/writes";

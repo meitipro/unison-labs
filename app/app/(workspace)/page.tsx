@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import AppConsole from "../../../components/AppConsole";
-import { getRubric } from "../../../lib/touchstone";
+import { getRubric } from "../../../lib/unison";
 
 export const metadata: Metadata = {
   title: "New assay - Unison",

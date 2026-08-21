@@ -1,7 +1,7 @@
 /**
  * The single place that decides which GenLayer network the whole app talks to.
  *
- * Touchstone runs on the Studio network. Flip it with one env var:
+ * Unison runs on the Studio network. Flip it with one env var:
  *
  *   NEXT_PUBLIC_GENLAYER_NETWORK=bradbury
  *
@@ -101,8 +101,8 @@ export function toAddress(value: string | undefined | null): string {
   }
 }
 
-/** The deployed Touchstone. Empty until one is deployed. */
-export const TOUCHSTONE = toAddress(process.env.NEXT_PUBLIC_TOUCHSTONE_ADDRESS);
+/** The deployed Unison. Empty until one is deployed. */
+export const CONTRACT = toAddress(process.env.NEXT_PUBLIC_UNISONLABS_ADDRESS);
 
 /**
  * False until a contract is configured.
@@ -115,7 +115,7 @@ export const TOUCHSTONE = toAddress(process.env.NEXT_PUBLIC_TOUCHSTONE_ADDRESS);
  * A contract address is PER NETWORK: flipping the network env var without
  * redeploying points the app at an address that does not exist there.
  */
-export const IS_LIVE = TOUCHSTONE.length > 0;
+export const IS_LIVE = CONTRACT.length > 0;
 
 const VERCEL_PRODUCTION_URL = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL;
 

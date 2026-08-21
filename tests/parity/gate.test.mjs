@@ -4,7 +4,7 @@
  *   npm test
  *
  * lib/gate.ts refuses submissions on its own authority, before any transaction
- * exists. If it disagrees with contracts/touchstone.py by one character, one of
+ * exists. If it disagrees with contracts/unison.py by one character, one of
  * two things happens and both are bad: it refuses work the chain would have
  * marked, or it waves through work the chain refuses after somebody has already
  * signed for it.

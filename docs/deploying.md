@@ -73,7 +73,7 @@ To point it at the live contract, copy `.env.example` to `.env.local` and set
 one line:
 
 ```
-NEXT_PUBLIC_TOUCHSTONE_ADDRESS=0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4
+NEXT_PUBLIC_UNISONLABS_ADDRESS=0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4
 ```
 
 Copy the address **exactly** as written. Studio matches the string literally and
@@ -120,10 +120,10 @@ in the build.
 | name | value | why |
 | --- | --- | --- |
 | `NEXT_PUBLIC_GENLAYER_NETWORK` | `studionet` | which network everything reads |
-| `NEXT_PUBLIC_TOUCHSTONE_ADDRESS` | `0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4` | the deployed contract |
+| `NEXT_PUBLIC_UNISONLABS_ADDRESS` | `0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4` | the deployed contract |
 | `NEXT_PUBLIC_ORIGIN` | `https://your-domain` | permalinks and metadata |
 
-Set nothing else. In particular **do not put `TOUCHSTONE_DEPLOYER_KEY` in
+Set nothing else. In particular **do not put `UNISONLABS_DEPLOYER_KEY` in
 Vercel.** The website never reads it: an assay is signed in the visitor's own
 wallet, and that variable exists only for the local `deploy` / `verify` scripts.
 A key in a hosting dashboard is a key one misconfigured log away from being
@@ -145,7 +145,7 @@ Only if you want your own instead of the existing one.
 
 ```bash
 # a throwaway key is fine: Studio charges nothing
-echo "TOUCHSTONE_DEPLOYER_KEY=0x<64 hex characters>" >> .env.local
+echo "UNISONLABS_DEPLOYER_KEY=0x<64 hex characters>" >> .env.local
 npm run deploy -- --yes
 npm run verify -- --contract=0x<the address it printed>
 ```
@@ -155,7 +155,7 @@ own suite passes. The rubric, the anchors, the gate probes and the bands are
 frozen by that transaction; there is no admin method that edits any of them,
 which is the point.
 
-Then set `NEXT_PUBLIC_TOUCHSTONE_ADDRESS` to the new address, locally and in
+Then set `NEXT_PUBLIC_UNISONLABS_ADDRESS` to the new address, locally and in
 Vercel. **An address is per network:** changing `NEXT_PUBLIC_GENLAYER_NETWORK`
 without deploying again points the site at an address that does not exist there.
 
@@ -170,7 +170,7 @@ without deploying again points the site at an address that does not exist there.
 - **Studio is rate limited to 30 requests a minute** and answers a burst with
   "unknown RPC error" rather than a 429. Reads are deduped in flight and backed
   off for that reason. A cold build of every route stays inside it.
-- **Changing `contracts/touchstone.py` silently invalidates the deployment.**
+- **Changing `contracts/unison.py` silently invalidates the deployment.**
   The site keeps reading the old address, every view still answers, and the
   answers come from code that is no longer in the repository. `npm run match` is
   the one call that catches it.

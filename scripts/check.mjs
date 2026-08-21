@@ -74,7 +74,7 @@ const EXEMPT = new Set([
   // The screen is still correct. `houseStyle` in lib/writes.ts converts a
   // refusal on the way out of the receipt, so nobody reads the em dash. Fold
   // the change into the contract at the next deploy that happens anyway.
-  join("contracts", "touchstone.py"),
+  join("contracts", "unison.py"),
 ]);
 
 function* walk(dir) {

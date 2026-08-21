@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { WorkspaceHeader } from "../../../../components/WorkspaceShell";
 import * as copy from "../../../../lib/copy";
 import { NETWORK_LABEL } from "../../../../lib/chain";
-import { getStats } from "../../../../lib/touchstone";
+import { getStats } from "../../../../lib/unison";
 import {
   POOL_IS_READABLE,
   commitment,

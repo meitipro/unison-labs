@@ -1,6 +1,6 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """
-Touchstone -- contract review, judged by the network itself.
+Unison -- contract review, judged by the network itself.
 
 A source url goes in. Out comes a mark out of ten against the rubric published
 below, by validators who each read the source and mark it themselves. Nothing
@@ -454,7 +454,7 @@ def fence(text: str) -> str:
 def clip(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
-    return text[:limit] + "\n[clipped by touchstone]"
+    return text[:limit] + "\n[clipped by unison]"
 
 
 def _ids_of(kind: str) -> list[str]:
@@ -1167,7 +1167,7 @@ def name_the_split(source: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-class Touchstone(gl.Contract):
+class Unison(gl.Contract):
     #: Frozen at deployment and never written again. There is no method
     #: anywhere below that edits a criterion, an anchor or a band.
     rubric_version: str

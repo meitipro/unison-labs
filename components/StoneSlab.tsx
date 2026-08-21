@@ -241,7 +241,7 @@ export default function StoneSlab({
       group.add(glow);
 
       // Reference streaks of known purity, dimmer, below the sample. This is
-      // what a real touchstone carries, and what makes the sample readable.
+      // what a real unison carries, and what makes the sample readable.
       if (references) {
         const refs = new THREE.Group();
         const refTex = streakTexture(false);
