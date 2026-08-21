@@ -474,6 +474,23 @@ export default function AppConsole({
             >
               {gate.eligible ? copy.GATE_PASSED_MEANS : copy.GATE_FAILED_MEANS}
             </p>
+
+            {/* Only where a submission is still ahead: after a report exists,
+                or a refusal, this would be describing something that already
+                happened. */}
+            {gate.eligible && (phase.at === "gated" || phase.at === "refused") ? (
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  maxWidth: "62ch",
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  color: "var(--ai2)",
+                }}
+              >
+                {copy.SUBMIT_MEANS}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -485,6 +502,23 @@ export default function AppConsole({
             <p style={{ margin: "14px 0 0", maxWidth: "58ch", fontSize: 14.5, lineHeight: 1.62, color: "var(--ai2)" }}>
               {phase.why}
             </p>
+            {/*
+              "Connect a wallet to submit" with nothing to click is a dead end.
+              This is the only refusal with a next step, so it is the only one
+              that gets a button: everything else here is the gate saying no,
+              and the fix for that is a different contract, not another press.
+            */}
+            {!wallet.address && wallet.available ? (
+              <button
+                type="button"
+                className="ws-run"
+                style={{ marginTop: 18 }}
+                disabled={wallet.connecting}
+                onClick={() => void submit()}
+              >
+                {wallet.connecting ? copy.CONNECTING : copy.CONNECT_AND_SUBMIT}
+              </button>
+            ) : null}
           </div>
         ) : null}
 
