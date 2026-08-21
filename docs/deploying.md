@@ -73,7 +73,7 @@ To point it at the live contract, copy `.env.example` to `.env.local` and set
 one line:
 
 ```
-NEXT_PUBLIC_UNISONLABS_ADDRESS=0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4
+NEXT_PUBLIC_UNISONLABS_ADDRESS=0x2681E1DC7e2e109e74a63F808a1f7aE931E44fE1
 ```
 
 Copy the address **exactly** as written. Studio matches the string literally and
@@ -86,7 +86,7 @@ Checks worth running:
 npm test               # house style, 21 node tests, 166 contract checks
 npm run typecheck
 npm run check          # house style on its own
-npm run match -- 0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4
+npm run match -- 0x2681E1DC7e2e109e74a63F808a1f7aE931E44fE1
 ```
 
 `match` is the one that matters before trusting a live number: it compares the
@@ -120,7 +120,7 @@ in the build.
 | name | value | why |
 | --- | --- | --- |
 | `NEXT_PUBLIC_GENLAYER_NETWORK` | `studionet` | which network everything reads |
-| `NEXT_PUBLIC_UNISONLABS_ADDRESS` | `0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4` | the deployed contract |
+| `NEXT_PUBLIC_UNISONLABS_ADDRESS` | `0x2681E1DC7e2e109e74a63F808a1f7aE931E44fE1` | the deployed contract |
 | `NEXT_PUBLIC_ORIGIN` | `https://your-domain` | permalinks and metadata |
 
 Set nothing else. In particular **do not put `UNISONLABS_DEPLOYER_KEY` in

@@ -78,7 +78,7 @@ export function poolFoot(routed: number, named: number): string {
 /**
  * Too big, said with both numbers and a way forward.
  *
- * The contract's own refusal is "the source is larger than 48000 bytes",
+ * The contract's own refusal names the ceiling and nothing else,
  * which is true and tells nobody how far over they are or what to do. It also
  * used to arrive after a transaction had been signed and settled. This is the
  * same refusal, free, and specific.

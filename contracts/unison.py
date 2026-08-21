@@ -55,14 +55,26 @@ MAX_SCORE = 2
 MAX_TOTAL = 10
 
 MAX_URL_CHARS = 400
-MAX_SOURCE_BYTES = 48_000
+MAX_SOURCE_BYTES = 160_000
 MAX_REASON_CHARS = 120
 
 #: How much of each subject reaches the prompt. A contract longer than this is
 #: clipped rather than refused, and the clip is marked so the model is not
 #: asked to judge the absence of code it was never shown.
-PROMPT_SOURCE_CHARS = 24_000
-PROMPT_SITE_CHARS = 12_000
+#:
+#: MAX_SOURCE_BYTES IS DELIBERATELY TWICE THIS. The refusal is not a capacity
+#: limit -- nothing in the network caps a source, the file never enters
+#: calldata or storage, and the validators fetch it themselves. It is the point
+#: past which a model would see less than half of what it is being asked to
+#: mark, and a mark on a fraction recorded as a mark on the file is the one
+#: thing this contract must not produce.
+#:
+#: Raised from 24,000 / 48,000 once the pool was measured. Every model in it
+#: carries a context window in the hundreds of thousands of tokens, and 80,000
+#: characters is roughly 20,000 of them, so the old ceiling was refusing files
+#: the jury could read comfortably.
+PROMPT_SOURCE_CHARS = 80_000
+PROMPT_SITE_CHARS = 24_000
 
 #: The gate's `head` scope. The runner header is line one by definition.
 GATE_HEAD_CHARS = 400

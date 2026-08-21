@@ -25,10 +25,10 @@ scored, and judged by the network rather than by us.
 | | |
 | --- | --- |
 | Site | https://unisonlabs.tech |
-| Contract | [`0x39532a73F2A66552bDfE7813bF4273c02F547762`](https://explorer-studio.genlayer.com/address/0x39532a73F2A66552bDfE7813bF4273c02F547762) on GenLayer **studionet** |
+| Contract | [`0x2681E1DC7e2e109e74a63F808a1f7aE931E44fE1`](https://explorer-studio.genlayer.com/address/0x2681E1DC7e2e109e74a63F808a1f7aE931E44fE1) on GenLayer **studionet** |
 | Rubric | v1, frozen by the transaction that deployed the contract |
 
-`npm run match -- 0x39532a73F2A66552bDfE7813bF4273c02F547762` checks the
+`npm run match -- 0x2681E1DC7e2e109e74a63F808a1f7aE931E44fE1` checks the
 deployed bytes against `contracts/unison.py` byte for byte.
 
 Line endings are pinned to LF in `.gitattributes` precisely so that check is
