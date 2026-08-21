@@ -87,7 +87,7 @@ That boundary is the whole architecture:
 
 Asking a model for five 0/1/2 scores and requiring the jury to agree exactly
 **never settles**. Not rarely. Three markings of one source from a single node
-came back `[0,2,0,1,0]`, `[0,2,0,2,0]` and `[0,2,0,0,1]` — the band itself
+came back `[0,2,0,1,0]`, `[0,2,0,2,0]` and `[0,2,0,0,1]` - the band itself
 flipped between runs of the same model on the same bytes. Bare equality settled
 **0 of 3** assays, and widening the tolerance changed nothing.
 
@@ -96,7 +96,7 @@ question was one a count could answer:
 
 | decided by | criteria |
 | --- | --- |
-| `facts` | `agreement` · `untrusted` · `boundary` · `failure` |
+| `facts` | `agreement`, `untrusted`, `boundary`, `failure` |
 | `judgment` | `necessity`, and all five site criteria |
 
 The counted four are read out of the agreed bytes in deterministic code, so
@@ -109,7 +109,7 @@ settled on the first try afterwards. The measurements are in
 ## The contract
 
 **11 public methods, 8 view and 3 write**, `genvm-lint` clean, pinned to a
-concrete runner hash. `npm run match -- 0x…` compares the deployed bytes against
+concrete runner hash. `npm run match -- 0x...` compares the deployed bytes against
 the file on disk, byte for byte.
 
 ```
@@ -127,7 +127,7 @@ contracts/test_helpers.py   166 checks over its pure half, on plain CPython
 - **Passing the gate proves almost nothing.** Anyone can type the words into a
   comment. Failing a required one proves a great deal, and costs nothing to find
   out.
-- **Normalisation names the characters it trims** — `" \t\n\v\f\r"` — rather
+- **Normalisation names the characters it trims** - `" \t\n\v\f\r"` - rather
   than calling `str.strip()` or `String.trim()`, which take different sets and
   disagree about the byte order mark. A file with a BOM would otherwise get two
   different digests and the browser would look up a report filed under a key
@@ -156,7 +156,7 @@ validator marquee, and put a pool of 1,001 under the hero.
 
 All of it now reads. The counters show what the contract has issued, what the
 rubric publishes, what a refusal costs, and the pool size that
-`sim_getAllValidators` reports — the same call the Validators screen uses, so
+`sim_getAllValidators` reports - the same call the Validators screen uses, so
 the two can never disagree. The marquee lists the model families actually in the
 pool. Where the node does not answer there is no marquee, because a hardcoded
 list of plausible models is an assertion dressed as a reading.
@@ -169,7 +169,7 @@ a zero.
 
 One bit. It agrees with the leader's result or it does not, and that aggregate
 is all the receipt or the contract ever carries. So there is **no per-node mark
-to display** — not on the landing, not on a report, not anywhere. The design
+to display** - not on the landing, not on a report, not anywhere. The design
 drew five nodes each holding a 9; where they were, the site now shows the
 agreement rule the contract publishes, read off the chain, which is the thing
 the sentence above it is actually claiming.
@@ -198,7 +198,7 @@ npm run dev            # http://localhost:4400
 ```bash
 npm test               # 21 node tests + 166 pure-half contract checks
 npm run lint:contract  # genvm-lint
-npm run match -- 0x…   # is the deployed contract the source on disk?
+npm run match -- 0x...   # is the deployed contract the source on disk?
 ```
 
 The site works with **no contract configured**. Every screen that would show a
@@ -208,7 +208,7 @@ mark says so instead. It never invents one.
 
 ```bash
 npm run deploy -- --yes
-npm run verify -- --contract=0x…
+npm run verify -- --contract=0x...
 ```
 
 `deploy` refuses to send unless the runner header is pinned and the contract's
