@@ -107,7 +107,13 @@ export const SUBMIT_MEANS =
  */
 export function tooLarge(bytes: number, limit: number): string {
   const over = Math.round(((bytes - limit) / limit) * 100);
-  return `That file is ${bytes.toLocaleString("en-US")} bytes and the contract takes ${limit.toLocaleString("en-US")}, so it is ${over}% over. Nothing was signed. A contract this size has to be reviewed a file at a time.`;
+  return (
+    `That file is ${bytes.toLocaleString("en-US")} bytes and the contract takes ` +
+    `${limit.toLocaleString("en-US")}, so it is ${over}% over. Nothing was signed. ` +
+    `A rubric is applied to one file, so a project split across several can be ` +
+    `submitted a file at a time - but a single file this long is past what this ` +
+    `contract will read, and there is no way to divide it.`
+  );
 }
 
 export const CONNECT_AND_SUBMIT = "Connect a wallet and submit";
