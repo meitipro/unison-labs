@@ -286,6 +286,16 @@ export const APP_LEDE =
 export const APP_SOURCE_LABEL = "Source";
 export const APP_URL_LABEL = "Raw file URL";
 export const APP_SITE_LABEL = "Site, optional and scored separately";
+
+/** A GitHub page url serves markup; the raw one serves the source. */
+export const GITHUB_CONVERTED = "A GitHub link, so this is what gets read:";
+
+export const SOURCE_NOTE =
+  "A raw file url, or the GitHub page you are looking at - either works. Validators fetch it themselves and record its digest, so the file they read is the file the report is about.";
+
+export const SITE_EYEBROW = "The site, optional";
+export const SITE_NOTE =
+  "Scored separately against its own five criteria, and never averaged into the contract's ten. A careful contract behind a careless site is a different problem from the reverse.";
 export const APP_PASTE_PLACEHOLDER = [
   "from genlayer import *",
   "",

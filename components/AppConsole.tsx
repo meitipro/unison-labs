@@ -46,6 +46,7 @@ import {
   type GateSpec,
 } from "../lib/gate";
 import { getGateSpec, getReportByDigest, getSplitForDigest } from "../lib/unison";
+import { rawSourceUrl, isGithubPage } from "../lib/sourceUrl";
 import { useWallet } from "../lib/wallet";
 import { readableError } from "../lib/voice";
 import { assay, type Outcome, type Stage, type Votes } from "../lib/writes";
@@ -110,7 +111,10 @@ export default function AppConsole({
     async (event?: React.FormEvent) => {
       event?.preventDefault();
 
-      const url = sourceUrl.trim();
+      // A GitHub page url serves markup, not source. Convert it here, before
+      // this browser fetches and before the chain records anything: the report
+      // has to be filed under the url that was actually read.
+      const url = rawSourceUrl(sourceUrl);
       if (!url) {
         setPhase({ at: "refused", gate: null, why: copy.EMPTY_SUBMIT });
         return;
@@ -294,44 +298,64 @@ export default function AppConsole({
             </div>
           </div>
 
-          <>
-              <label>
-                <span className="sr-only">{copy.APP_URL_LABEL}</span>
-                <input
-                  className="ws-field"
-                  type="url"
-                  inputMode="url"
-                  spellCheck={false}
-                  placeholder={copy.HERO_PLACEHOLDER}
-                  value={sourceUrl}
-                  onChange={(event) => setSourceUrl(event.target.value)}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                      event.preventDefault();
-                      void submit();
-                    }
-                  }}
-                />
-              </label>
-              <label>
-                <span className="sr-only">{copy.APP_SITE_LABEL}</span>
-                <input
-                  className="ws-field"
-                  style={{ marginTop: 10 }}
-                  type="url"
-                  inputMode="url"
-                  spellCheck={false}
-                  placeholder={copy.PLACEHOLDER_SITE}
-                  value={siteUrl}
-                  onChange={(event) => setSiteUrl(event.target.value)}
-                />
-              </label>
-              <p className="ws-note" style={{ marginTop: 12 }}>
-                Validators fetch the raw file themselves and record its digest, so the file they
-                read is the file the report is about. A site url is optional, and scored
-                separately.
-              </p>
-          </>
+          <label>
+            <span className="sr-only">{copy.APP_URL_LABEL}</span>
+            <input
+              className="ws-field"
+              type="url"
+              inputMode="url"
+              spellCheck={false}
+              placeholder={copy.HERO_PLACEHOLDER}
+              value={sourceUrl}
+              onChange={(event) => setSourceUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  void submit();
+                }
+              }}
+            />
+          </label>
+
+          {/* Shown the moment a GitHub page url is recognised, because the
+              thing that gets fetched and recorded is not the thing that was
+              typed, and that should never be a surprise on a permanent
+              report. */}
+          {isGithubPage(sourceUrl) ? (
+            <p className="ws-converted">
+              <span>{copy.GITHUB_CONVERTED}</span>
+              <span className="mono">{rawSourceUrl(sourceUrl)}</span>
+            </p>
+          ) : (
+            <p className="ws-note" style={{ marginTop: 12 }}>
+              {copy.SOURCE_NOTE}
+            </p>
+          )}
+
+          {/* The site is a second subject with its own ten, not an extra field
+              on the first. It reads as an afterthought when it sits flush
+              against the source input, so it gets its own labelled block. */}
+          <div className="ws-subject">
+            <div className="ws-eyebrow" style={{ fontSize: 9.5, letterSpacing: "0.18em" }}>
+              {copy.SITE_EYEBROW}
+            </div>
+            <label>
+              <span className="sr-only">{copy.APP_SITE_LABEL}</span>
+              <input
+                className="ws-field"
+                style={{ marginTop: 10 }}
+                type="url"
+                inputMode="url"
+                spellCheck={false}
+                placeholder={copy.PLACEHOLDER_SITE}
+                value={siteUrl}
+                onChange={(event) => setSiteUrl(event.target.value)}
+              />
+            </label>
+            <p className="ws-note" style={{ marginTop: 10 }}>
+              {copy.SITE_NOTE}
+            </p>
+          </div>
 
           <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
             <button type="submit" className="ws-run" disabled={!ready}>

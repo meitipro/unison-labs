@@ -1212,6 +1212,34 @@ textarea.ws-field {
   outline-offset: 3px;
 }
 
+/* The url that will actually be fetched, when it is not the one typed. */
+.ws-converted {
+  margin: 12px 0 0;
+  display: grid;
+  gap: 4px;
+  padding: 11px 13px;
+  border: 1px solid var(--agl);
+  border-radius: 10px;
+  background: var(--af);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--am);
+}
+
+.ws-converted .mono {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ag);
+  overflow-wrap: anywhere;
+}
+
+/* The site is a second subject with its own ten, not a spare field. */
+.ws-subject {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--als);
+}
+
 /* --------------------------------------------------------------------------
    Waiting: preparing, and the signature
    --------------------------------------------------------------------------
