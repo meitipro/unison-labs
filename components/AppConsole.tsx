@@ -267,24 +267,19 @@ export default function AppConsole({
   /*
    * WHERE THE GATE RESULT IS ALLOWED TO APPEAR.
    *
-   * Only beside something it explains: a refusal, where the missing markers
-   * are the whole reason, and a finished report, where it is one part of a
-   * result. It is off screen for every wait -- preparing, signing, and the
-   * run itself.
+   * ONLY WHEN THE GATE IS THE REASON. Six green ticks and the word ELIGIBLE
+   * are not a result, and everywhere they appeared beside one they were read
+   * as part of it. They sat under "validators are still marking", under "this
+   * source was already reviewed, see report 8802", and under a finished score
+   * -- three places where the gate explained nothing and looked like a
+   * verdict.
    *
-   * During the run it was pure noise. Six green ticks and the word ELIGIBLE
-   * sat under a panel that said validators were still marking, so the screen
-   * showed a verdict-shaped thing while explaining that no verdict existed.
+   * So it renders in exactly one situation: a submission the gate itself
+   * refused, where the missing markers ARE the answer. Everywhere else the
+   * outcome speaks for itself, and the full gate row is on the report's own
+   * permalink for anyone who wants it.
    */
-  /* "Nothing has been scored yet" is true beside a refusal and false beside a
-     report, so the note under the gate follows this rather than the verdict. */
-  const hasReport = phase.at === "scored" || phase.at === "already";
-
-  const showGate =
-    phase.at === "refused" ||
-    phase.at === "scored" ||
-    phase.at === "split" ||
-    phase.at === "already";
+  const showGate = phase.at === "refused" && !!gate && !gate.eligible;
 
   /* The header follows the phase, the way the design's `appTitle` does. */
   const title =
@@ -529,29 +524,9 @@ export default function AppConsole({
                 color: "var(--am)",
               }}
             >
-              {!gate.eligible
-                ? copy.GATE_FAILED_MEANS
-                : hasReport
-                  ? copy.GATE_BESIDE_REPORT
-                  : copy.GATE_PASSED_MEANS}
+              {copy.GATE_FAILED_MEANS}
             </p>
 
-            {/* Only while a submission is still ahead. Beside a finished
-                report it would be describing something that already
-                happened. */}
-            {gate.eligible && phase.at === "refused" ? (
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  maxWidth: "62ch",
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                  color: "var(--ai2)",
-                }}
-              >
-                {copy.SUBMIT_MEANS}
-              </p>
-            ) : null}
           </div>
         ) : null}
 

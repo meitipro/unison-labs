@@ -76,28 +76,6 @@ export function poolFoot(routed: number, named: number): string {
 }
 
 /**
- * What the gate's verdict does and does not mean, said next to the verdict.
- *
- * The gate is six substring searches. It runs instantly, in this browser,
- * before any wallet or transaction, and a row of green ticks looks exactly
- * like a result. It is not one, and the asymmetry between passing and failing
- * is the whole point of having it: passing is cheap to fake and failing is
- * not.
- */
-export const GATE_PASSED_MEANS =
-  "Presence checks only, and passing them proves almost nothing - the gate looks for six strings, and a comment containing them passes just as well as working code. Nothing has been scored yet.";
-
-/**
- * What pressing the button is about to do, said before it does it.
- *
- * A wallet popup that arrives with no warning is a popup people dismiss. This
- * names the one transaction, says who reads the file afterwards, and says how
- * long that takes, so the signature request is expected rather than sprung.
- */
-export const SUBMIT_MEANS =
-  "Submitting signs one transaction. The validators then fetch this file themselves, agree on the bytes, and mark it against the rubric - minutes rather than seconds, because the jury rotates.";
-
-/**
  * Too big, said with both numbers and a way forward.
  *
  * The contract's own refusal is "the source is larger than 48000 bytes",
@@ -118,11 +96,6 @@ export function tooLarge(bytes: number, limit: number): string {
 
 export const CONNECT_AND_SUBMIT = "Connect a wallet and submit";
 export const CONNECTING = "Check your wallet";
-
-/* Beside a finished report the gate is a record of what was checked, not a
-   caveat about what has not happened yet. */
-export const GATE_BESIDE_REPORT =
-  "Presence checks, run here before the transaction and again by every validator on the agreed bytes. Passing them is not part of the score.";
 
 export const GATE_FAILED_MEANS =
   "Failing a required check proves a great deal, which is why the gate runs first. No validator spends an inference on this and nothing is charged.";
