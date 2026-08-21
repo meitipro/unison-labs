@@ -57,7 +57,11 @@ reads exactly like a code regression. Stop the dev server, delete `.next`, then
 build.
 
 The site works with no contract configured - every screen that would show a mark
-says so instead. It never invents one.
+says so instead. It never invents one. Verified: it builds and serves all ten
+routes with the environment file removed entirely.
+
+Putting it on GitHub and online, step by step, including which environment
+variables to set and which to never set: **[docs/deploying.md](docs/deploying.md)**.
 
 ### Deploying your own
 
