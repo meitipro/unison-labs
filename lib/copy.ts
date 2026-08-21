@@ -33,7 +33,7 @@ export const HERO_PILL = "Five validators, one agreed number";
 export const LAUNCH = "Launch the dApp";
 
 export const HERO_LEDE =
-  "Paste a contract, read the streak. Validators mark it against a published rubric and the report only stands where they agree.";
+  "Point at a contract, read the streak. Validators mark it against a published rubric and the report only stands where they agree.";
 
 export const HERO_PLACEHOLDER = "raw file URL of the contract";
 /**
@@ -292,28 +292,6 @@ export const APP_PASTE_PLACEHOLDER = [
   "class MyContract(gl.Contract):",
   "    ...",
 ].join("\n");
-
-/** What the paste box can and cannot do, said where the box is. */
-/**
- * The two modes, named by what they DO.
- *
- * They were "Paste source" and "From URL", which reads as a question about
- * input format when it is a question about outcome: one sends a transaction
- * and comes back with a mark, the other cannot and never will. Validators
- * fetch the file themselves, so text pasted into one browser is reachable by
- * none of them, and there is nothing for a transaction to point at.
- */
-export const MODE_REVIEW = "Submit for review";
-export const MODE_CHECK = "Check a draft, free";
-
-export const BUTTON_CHECK = "Check this draft";
-
-export const APP_PASTE_NOTE =
-  "This runs the gate here in your browser and stops. Nothing is signed, nothing is scored, and no validator sees it - a mark has to be checkable by every validator, and text in this browser is reachable by none of them. Put the file somewhere they can fetch it, then submit it for review.";
-
-export function charCount(n: number): string {
-  return n ? `${n.toLocaleString("en-US")} chars` : "nothing pasted yet";
-}
 
 export const APP_WALLET_NEEDED =
   "Connect a wallet to submit. The gate above already ran here, free.";

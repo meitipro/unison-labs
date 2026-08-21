@@ -3,21 +3,26 @@
 /**
  * The workspace's Home pane: source in, and everything a submission turns into.
  *
- * The design's compose screen, wired to the real thing. Two inputs rather than
- * one, because they do different jobs and the design's single paste box cannot
- * do the second:
+ * The design's compose screen, wired to the real thing.
  *
- *   a raw file URL  the validators fetch it themselves, agree on the bytes and
- *                   mark it. This is what produces a report.
- *   pasted source   runs the gate here, free, and stops. A mark has to be
- *                   checkable by every validator, and text in this browser is
- *                   reachable by none of them, so pasting cannot be marked.
- *                   Said on the screen rather than discovered.
+ * ONE PATH, AND IT ALWAYS ENDS IN A SIGNATURE. The design offers a paste box
+ * beside the url, and this carried it for a while as a free local check. It
+ * had to go: it looked like the other half of the same feature and was not,
+ * so people pasted a contract, watched the gate tick six boxes, and concluded
+ * they had been reviewed when no transaction had been sent and no validator
+ * had seen anything.
  *
- * WHAT RUNS WHERE, for the URL path: this browser fetches the source, runs the
- * published gate, hashes it and asks the chain whether those exact bytes
- * already hold a report - all free, and a refusal stops there. Only then does
- * anything ask for a signature.
+ * Pasting cannot be reviewed, for reasons that are not ours to route around.
+ * Validators fetch the file themselves -- that is the whole claim -- so text
+ * in one browser is reachable by none of them. Putting the source in the
+ * calldata instead would mean the jury taking the submitter's word for what it
+ * is, and Studio rejects a write argument somewhere between 5,000 and 20,000
+ * characters anyway, which most real contracts exceed.
+ *
+ * WHAT RUNS WHERE: this browser fetches the source, runs the published gate,
+ * hashes it and asks the chain whether those exact bytes already hold a
+ * report. A refusal stops there and costs nothing. Everything past that point
+ * is one transaction, signed in the visitor's own wallet.
  *
  * The rail, the header chips and the theme switch belong to `WorkspaceShell`;
  * this renders the pane and its own title, which follows the phase the way the
@@ -46,8 +51,6 @@ import { readableError } from "../lib/voice";
 import { assay, type Outcome, type Stage, type Votes } from "../lib/writes";
 import type { Report } from "../lib/types";
 
-type Mode = "url" | "paste";
-
 type Phase =
   | { at: "idle" }
   | { at: "gated"; gate: GateResult }
@@ -67,10 +70,8 @@ export default function AppConsole({
   rubric: string;
 }) {
   const wallet = useWallet();
-  const [mode, setMode] = useState<Mode>("url");
   const [sourceUrl, setSourceUrl] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
-  const [pasted, setPasted] = useState("");
   const [phase, setPhase] = useState<Phase>({ at: "idle" });
   const [spec, setSpec] = useState<GateSpec>(SPEC);
   const resultRef = useRef<HTMLDivElement | null>(null);
@@ -100,18 +101,6 @@ export default function AppConsole({
     async (event?: React.FormEvent) => {
       event?.preventDefault();
 
-      /* ---- paste: the gate, free, and no transaction ------------------- */
-      if (mode === "paste") {
-        const text = pasted.trim();
-        if (!text) {
-          setPhase({ at: "refused", gate: null, why: copy.EMPTY_SUBMIT });
-          return;
-        }
-        setPhase({ at: "gated", gate: runGate(text, spec) });
-        return;
-      }
-
-      /* ---- url: the whole thing ---------------------------------------- */
       const url = sourceUrl.trim();
       if (!url) {
         setPhase({ at: "refused", gate: null, why: copy.EMPTY_SUBMIT });
@@ -227,11 +216,11 @@ export default function AppConsole({
         provisional: outcome.provisional,
       });
     },
-    [mode, pasted, sourceUrl, siteUrl, spec, wallet],
+    [sourceUrl, siteUrl, spec, wallet],
   );
 
   const gate = "gate" in phase ? phase.gate : null;
-  const ready = mode === "paste" ? pasted.trim().length > 0 : sourceUrl.trim().length > 0;
+  const ready = sourceUrl.trim().length > 0;
 
   /* The header follows the phase, the way the design's `appTitle` does. */
   const title =
@@ -259,30 +248,12 @@ export default function AppConsole({
       {phase.at !== "working" ? (
         <form className="ws-panel" onSubmit={submit}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-            {/*
-              THESE ARE TWO DIFFERENT JOBS, not two ways to type the same
-              thing, and labelling them "Paste source" and "From URL" hid that
-              behind a question about input format. Only one of them can ever
-              produce a mark: validators fetch the file themselves, so pasted
-              text is reachable by none of them and no transaction can be sent
-              for it. The labels now name the ACTION, and the one that reviews
-              comes first because it is the point of the screen.
-            */}
-            <div className="ws-seg">
-              <button type="button" aria-pressed={mode === "url"} onClick={() => setMode("url")}>
-                {copy.MODE_REVIEW}
-              </button>
-              <button type="button" aria-pressed={mode === "paste"} onClick={() => setMode("paste")}>
-                {copy.MODE_CHECK}
-              </button>
+            <div className="ws-eyebrow" style={{ fontSize: 10, letterSpacing: "0.18em" }}>
+              {copy.APP_SOURCE_LABEL}
             </div>
             <div className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <span>
-                {mode === "url"
-                  ? sourceUrl.trim()
-                    ? "one raw file"
-                    : "no url yet"
-                  : copy.charCount(pasted.length)}
+                {sourceUrl.trim() ? "one raw file" : "no url yet"}
               </span>
               {ready ? (
                 <button
@@ -290,7 +261,6 @@ export default function AppConsole({
                   className="ws-quiet"
                   style={{ fontFamily: "var(--mono)", fontSize: 10.5 }}
                   onClick={() => {
-                    setPasted("");
                     setSourceUrl("");
                     setSiteUrl("");
                     setPhase({ at: "idle" });
@@ -302,28 +272,7 @@ export default function AppConsole({
             </div>
           </div>
 
-          {mode === "paste" ? (
-            <>
-              <textarea
-                className="ws-field"
-                spellCheck={false}
-                aria-label={copy.APP_SOURCE_LABEL}
-                placeholder={copy.APP_PASTE_PLACEHOLDER}
-                value={pasted}
-                onChange={(event) => setPasted(event.target.value)}
-                onKeyDown={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                    event.preventDefault();
-                    void submit();
-                  }
-                }}
-              />
-              <p className="ws-note" style={{ marginTop: 12 }}>
-                {copy.APP_PASTE_NOTE}
-              </p>
-            </>
-          ) : (
-            <>
+          <>
               <label>
                 <span className="sr-only">{copy.APP_URL_LABEL}</span>
                 <input
@@ -360,15 +309,13 @@ export default function AppConsole({
                 read is the file the report is about. A site url is optional, and scored
                 separately.
               </p>
-            </>
-          )}
+          </>
 
           <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
             <button type="submit" className="ws-run" disabled={!ready}>
-              {mode === "paste" ? copy.BUTTON_CHECK : copy.BUTTON}
+              {copy.BUTTON}
             </button>
-            {mode === "url" ? (
-              <span className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "normal" }}>
+            <span className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "normal" }}>
                 <span>{copy.SAMPLES_LEAD}</span>
                 {copy.SAMPLES.map((sample, index) => (
                   <span key={sample.file} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -386,14 +333,13 @@ export default function AppConsole({
                     </button>
                   </span>
                 ))}
-              </span>
-            ) : null}
+            </span>
             <span className="ws-mono-quiet" style={{ marginLeft: "auto" }}>
               {ready ? "or press cmd + enter" : "nothing to review yet"}
             </span>
           </div>
 
-          {!SAMPLES_ARE_REACHABLE && mode === "url" ? (
+          {!SAMPLES_ARE_REACHABLE ? (
             <p className="ws-note">{copy.SAMPLES_UNREACHABLE}</p>
           ) : null}
         </form>
