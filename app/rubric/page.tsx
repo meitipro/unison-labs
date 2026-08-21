@@ -71,11 +71,16 @@ export default async function RubricPage() {
             <div className="kv-row">
               <span className="kv-key">rubric</span>
               <span className="kv-val">
+                {/* "10 criteria - 10 per subject" read as ten criteria in each
+                    subject, which would be twenty. Say which side of the
+                    subject each figure is on, and count the criteria the
+                    rubric actually publishes rather than subjects x 5. */}
                 {fmt.joinMono([
                   rubric.version,
-                  `${rubric.subjects.length * 5} criteria`,
+                  `${rubric.subjects.reduce((n, s) => n + s.criteria.length, 0)} criteria in all`,
+                  `${rubric.subjects[0]?.criteria.length ?? 0} per subject`,
                   `0 to ${rubric.max_score} each`,
-                  `${rubric.max_total} per subject`,
+                  `${rubric.max_total} points per subject`,
                 ])}
               </span>
             </div>

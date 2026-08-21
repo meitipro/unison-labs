@@ -27,7 +27,6 @@ import StoneSlab from "./StoneSlab";
 import * as copy from "../lib/copy";
 
 export type Counter = {
-  glyph: string;
   /** Null when the value could not be read. */
   value: number | null;
   suffix?: string;
@@ -95,17 +94,10 @@ function Stat({ counter, index }: { counter: Counter; index: number }) {
 
   return (
     <div className="reveal" style={{ animationDelay: `${500 + index * 80}ms` }}>
-      <div
-        style={{
-          fontFamily: "var(--display)",
-          fontSize: "clamp(22px, 3vw, 33px)",
-          lineHeight: 1,
-          color: "var(--white)",
-        }}
-        aria-hidden="true"
-      >
-        {counter.glyph}
-      </div>
+      {/* The design sets a display glyph over each figure -- # * ~ % -- which
+          reads as notation rather than decoration once the figures are real:
+          a percent sign over a validator count looks like a percentage, and a
+          tilde over an exact zero says "about". The label does the work. */}
       <div
         style={{
           marginTop: 8,

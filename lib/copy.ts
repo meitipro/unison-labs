@@ -26,28 +26,43 @@ export const PAGE_TITLE = "One Contract, One Agreed Number - Unison";
 export const META_DESCRIPTION =
   "Score a GenLayer contract out of ten against a published rubric, judged by the network's own validators.";
 
-export const EYEBROW = "Contract review, judged by the network itself";
-
 /** The hero, two dotted lines. */
 export const HERO_LINE_1 = "One Contract";
 export const HERO_LINE_2 = "One Agreed Number";
 export const HERO_PILL = "Five validators, one agreed number";
 export const LAUNCH = "Launch the dApp";
 
-export const LEDE =
-  "Paste a GenLayer contract. Validators read it against a rubric published before anyone was scored, and mark it out of ten. Point at the site too and it gets its own ten, separately.";
-
 export const HERO_LEDE =
   "Paste a contract, read the streak. Validators mark it against a published rubric and the report only stands where they agree.";
 
 export const HERO_PLACEHOLDER = "raw file URL of the contract";
-export const HERO_IDLE = "Site optional, and scored separately";
+/**
+ * The four figures under the hero.
+ *
+ * The design puts a decorative glyph over each -- a hash, an asterisk, a tilde,
+ * a percent sign. They are dropped: a percent sign over a validator count reads
+ * as a percentage, and a tilde over a figure that is exactly zero says the
+ * opposite of what is true. The label carries the meaning instead.
+ */
+export const COUNTER_REPORTS_ONE = "Report issued";
+export const COUNTER_REPORTS = "Reports issued";
+export const COUNTER_CRITERIA = "Published criteria";
+export const COUNTER_REFUSAL = "Cost of a refusal, in inferences";
+export const COUNTER_POOL = "Validators in the pool";
 
-/** The pool marquee. Which models a validator may be running is undisclosed. */
+/**
+ * The pool marquee.
+ *
+ * The names are READ FROM THE NETWORK, not listed here -- `sim_getAllValidators`
+ * publishes every validator's model, and `lib/validators.ts` collapses them to
+ * families. The design's list was Claude, GPT, Gemini, Llama, Mistral, DeepSeek,
+ * Qwen and "Undisclosed"; the pool this app actually talks to runs no Llama and
+ * several models that list never mentions, and nothing about it is undisclosed.
+ * Where the node does not answer the marquee is left out entirely rather than
+ * falling back to a list, which would be an assertion dressed as a reading.
+ */
 export const POOL_LABEL = "Models in the validator pool";
-export const POOL = [
-  "Claude", "GPT", "Gemini", "Llama", "Mistral", "DeepSeek", "Qwen", "Undisclosed",
-];
+export const POOL_UNKNOWN = "The node did not answer, so the pool is not shown.";
 export const POOL_CRITERIA = [
   "agreement rule fits",
   "needs genlayer at all",
@@ -57,9 +72,40 @@ export const POOL_CRITERIA = [
 ];
 
 export const CONSENSUS_EYEBROW = "Consensus";
-export const CONSENSUS_HEADING = "Five readings, drawn from a pool of a thousand";
+
+/**
+ * The heading names the real pool size, so it cannot drift from the Validators
+ * screen. The design said "a pool of a thousand" and the counter beside it said
+ * 1,001; the network this runs on has twenty, and the workspace has always said
+ * so. One of the two had to be reading rather than asserting.
+ */
+export function consensusHeading(poolSize: number | null): string {
+  if (poolSize === null) return "Several readings, one agreed number";
+  return `Several readings, drawn from a pool of ${poolSize.toLocaleString("en-US")}`;
+}
+
 export const CONSENSUS_BODY =
-  "Every validator runs a different and undisclosed model, reads the same raw file, marks it against the same anchors - the report only stands where they agree";
+  "Validators read the same raw file, mark it against the same anchors, and the report only stands where they agree under the rule below";
+
+/** What the contract publishes as the meaning of "agreed". */
+export const AGREEMENT_EYEBROW = "The agreement rule, as published";
+export const AGREEMENT_NOTE =
+  "Read from the contract, which fixed this rule in the transaction that deployed it. A validator's vote is one bit, so no per-node mark exists to show here or anywhere else.";
+
+export function agreementGap(points: number, divergent: number): string {
+  const gap = points === 1 ? "one point" : `${points} points`;
+  const spread =
+    divergent === 1 ? "on one criterion only" : `on at most ${divergent} criteria`;
+  return `Two markers may differ by ${gap}, ${spread}, and the report still stands`;
+}
+
+export const AGREEMENT_BAND = "The band both markers land in must be the same";
+export const AGREEMENT_REASONS =
+  "Wording is never compared, because two careful readers never phrase a reason alike";
+
+export function agreementCounted(counted: number, judged: number): string {
+  return `${counted} criteria are counted in deterministic code and ${judged} are put to the jury`;
+}
 
 export const MACHINERY_HEADING = "Four parts of the machinery";
 export const MACHINERY_TABS = ["Gate", "Anchors", "Consensus", "Record"];
@@ -68,26 +114,7 @@ export const CLOSE_HEADING = "Find Out What The Network Makes Of Your Contract";
 export const CLOSE_BODY =
   "Free, in the browser, and the gate runs before a validator spends a single inference";
 
-/** The three columns under the hero. */
-export const PILLARS: Array<{ index: string; title: string; body: string }> = [
-  {
-    index: "01 The gate",
-    title: "Free, and it runs in your browser",
-    body: "Presence checks stop the contract spending a validator's inference on something that isn't an Intelligent Contract",
-  },
-  {
-    index: "02 The marks",
-    title: "Summed in the contract, not by a model",
-    body: "Each criterion scores 0, 1 or 2 against a published anchor, and the band comes from the total",
-  },
-  {
-    index: "03 The report",
-    title: "Permanent once the network finalizes",
-    body: "One permalink carrying the source, the digest and the rubric version beside the marks",
-  },
-];
-
-/** Four commitments the design makes before a single contract is read. */
+/** Four commitments the contract makes before a single contract is read. */
 export const COMMITMENTS: Array<{ title: string; body: string }> = [
   {
     title: "The standard is readable",
@@ -107,10 +134,9 @@ export const COMMITMENTS: Array<{ title: string; body: string }> = [
   },
 ];
 
-export const HOW_EYEBROW = "How it works";
-export const HOW_HEADING_PLAIN = "A rubric first, ";
-export const HOW_HEADING_ACCENT = "then a number";
-export const HOW_LEDE = "Four commitments the design makes before a single contract is read";
+export const HOW_EYEBROW = "Story";
+export const HOW_HEADING = "A rubric first, then a number";
+export const HOW_LEDE = "Four commitments this contract makes before a single line is read";
 
 export const RESULT_SECTION_EYEBROW = "The result";
 export const RESULT_SECTION_HEADING_PLAIN = "Two numbers, ";
@@ -120,33 +146,14 @@ export const RESULT_SECTION_BODY =
 export const RESULT_SECTION_NOTE =
   "The streak on the stone is the same number drawn to length, read against reference marks at 4, 7 and 9";
 
-export const STANDARD_EYEBROW = "The standard";
-export const STANDARD_HEADING_PLAIN = "Published ";
-export const STANDARD_HEADING_ACCENT = "before anyone was scored";
-export const STANDARD_BODY =
-  "Every score point has an anchor - that is what makes exact agreement between validators reachable, and a score against a standard nobody can read is worth nothing";
-export const STANDARD_NOTE = "Ten criteria in all, five for the contract and five for the site";
-
 export const RECORD_EYEBROW = "The record";
 export const RECORD_HEADING_PLAIN = "One permalink, ";
 export const RECORD_HEADING_ACCENT = "permanent";
 export const RECORD_BODY =
   "Worth handing to somebody else - the source, the digest and the rubric version are recorded beside the marks";
 
-export const CLOSER_PLAIN = "Find out what the network ";
-export const CLOSER_ACCENT = "makes of your contract";
-
-export const FIELD_SOURCE = "Contract source";
-export const FIELD_SOURCE_QUALIFIER = "raw file URL";
-export const FIELD_SITE = "Site";
-export const FIELD_SITE_QUALIFIER = "optional, scored separately";
-
-export const PLACEHOLDER_SOURCE = "https://raw.githubusercontent.com/.../contract.py";
 export const PLACEHOLDER_SITE = "https://yourproduct.xyz";
 export const PLACEHOLDER_PASTE = "# { \"Depends\": \"py-genlayer:...\" }\nfrom genlayer import *";
-
-export const SWAP_TO_PASTE = "paste the source instead";
-export const SWAP_TO_URL = "use a URL instead";
 
 export const BUTTON = "Run assay";
 
@@ -157,14 +164,6 @@ export const SAMPLES: Array<{ label: string; file: string }> = [
   { label: "one that isn't an Intelligent Contract", file: "plain.py" },
 ];
 
-export const GATE_EYEBROW = "Step one - runs in your browser, free";
-export const GATE_HEADING = "The gate";
-export const GATE_NOTE =
-  "Presence checks only. Passing them proves almost nothing - anyone can type gl.nondet into a comment. Failing a required one proves a great deal, and it stops the contract spending a validator's inference on something that isn't an Intelligent Contract.";
-
-export const ELIGIBLE =
-  "Eligible. Passing the gate says only that this is an Intelligent Contract, not that it is a good one. The score below is the part that matters.";
-
 /** {ids} is the comma separated list of missing required checks. */
 export function refused(ids: string): string {
   return `Refused before scoring - missing ${ids}. This is not an Intelligent Contract, so no fee is charged and no validator spends inference on it.`;
@@ -172,11 +171,6 @@ export function refused(ids: string): string {
 
 export const EMPTY_SUBMIT = "Give it a raw source URL, or paste the source. Nothing else is needed.";
 
-export const STAGE_FETCHING = "validators are fetching the source";
-export const STAGE_SCORING = "scoring against the rubric on every node";
-
-export const RESULT_EYEBROW = "Step two - judged by the adjudication layer";
-export const RESULT_HEADING = "The streak";
 export const RESULT_NOTE =
   "Each criterion scores 0, 1 or 2 against a published anchor. The total is summed in the contract, never proposed by a model, and the band comes from the total by a pure function.";
 
@@ -199,21 +193,12 @@ export const CARD_2_TITLE = "What a 10 does not mean";
 export const CARD_2_BODY =
   "This reads source text. It does not execute, fuzz or verify anything. A contract that scores 10 here can still be broken, and this is a first pass before a person reads it, not instead of one.";
 
-export const BANDS = ["unfit", "workable", "strong", "exemplary"] as const;
-
-export function alreadyReviewed(id: number): string {
-  return `This exact source was already reviewed, see report ${id}.`;
-}
-
 export function nodesDisagreed(criterion: string): string {
   return `The validators did not agree on ${criterion}, so no report was issued and the fee was returned. That means the anchor is written badly, which is our problem rather than yours.`;
 }
 
 export const NODES_DISAGREED_UNNAMED =
   "The validators did not agree, so no report was issued and the fee was returned. That means an anchor is written badly, which is our problem rather than yours.";
-
-export const PROVISIONAL =
-  "Accepted, provisional - the marks exist, the report is permanent after finality.";
 
 export function finalized(id: number): string {
   return `Finalized - report ${id}`;
@@ -228,7 +213,6 @@ export const RUBRIC_HEADING = "The rubric";
 export const RUBRIC_LEDE =
   "Every score point has an anchor. That is what makes exact agreement between validators reachable, and a score against a standard nobody can read is worth nothing.";
 
-export const SPLIT_NOTE_TITLE = "When validators disagree";
 export const SPLIT_NOTE_BODY =
   "No report is issued and the splitting criterion is named. That is a signal the anchor is written badly, our problem rather than the submitter's.";
 
@@ -316,7 +300,6 @@ export const CONNECT_EYEBROW = "Review workspace";
 
 export const WRONG_CHAIN_TITLE = "Wrong Network";
 
-export const PANE_HOME_TITLE = "New review";
 export const PANE_REPORTS_TITLE = "Reports";
 export const PANE_REPORTS_LEDE =
   "Every report this contract has issued, newest first.";

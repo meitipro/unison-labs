@@ -88,3 +88,40 @@ export const getPool = cache(async function getPool(): Promise<Pool | null> {
 export function modelLabel(model: string): string {
   return model.startsWith("policy:") ? model.slice("policy:".length) : model;
 }
+
+/**
+ * The family a model belongs to, for the landing's marquee.
+ *
+ * Studio names the same family several ways -- `openai/gpt-5.4`,
+ * `policy:prd-gpt-5-4` -- and a marquee listing both is listing one model
+ * twice. This collapses them to the name a reader recognises. Anything
+ * unrecognised is passed through rather than dropped: a model this list has
+ * not heard of is still in the pool, and silently hiding it would make the
+ * marquee a curated claim instead of a reading.
+ */
+const FAMILIES: Array<[RegExp, string]> = [
+  [/gpt-oss/i, "GPT-OSS"],
+  [/gpt/i, "GPT"],
+  [/sonnet|claude/i, "Claude"],
+  [/gemini/i, "Gemini"],
+  [/gemma/i, "Gemma"],
+  [/deepseek/i, "DeepSeek"],
+  [/grok/i, "Grok"],
+  [/mistral/i, "Mistral"],
+  [/kimi/i, "Kimi"],
+  [/qwen/i, "Qwen"],
+  [/glm/i, "GLM"],
+  [/minimax/i, "MiniMax"],
+  [/llama/i, "Llama"],
+];
+
+export function modelFamily(model: string): string {
+  const name = modelLabel(model).replace(/^prd-/, "");
+  for (const [pattern, label] of FAMILIES) if (pattern.test(name)) return label;
+  return name;
+}
+
+/** The distinct families in the pool, in a stable order. */
+export function familiesOf(pool: Pool): string[] {
+  return [...new Set(pool.models.map(modelFamily))].sort((a, b) => a.localeCompare(b));
+}

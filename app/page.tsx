@@ -21,31 +21,38 @@ import * as copy from "../lib/copy";
 import * as fmt from "../lib/format";
 import { IS_LIVE, NETWORK_LABEL, TOUCHSTONE, explorerAddress, HAS_EXPLORER } from "../lib/chain";
 import { getNewestReport, getRubric, getStats } from "../lib/touchstone";
+import { familiesOf, getPool } from "../lib/validators";
 
 export const revalidate = 60;
 
 export default async function LandingPage() {
-  const [rubric, stats] = await Promise.all([getRubric(), getStats()]);
+  const [rubric, stats, pool] = await Promise.all([getRubric(), getStats(), getPool()]);
   const newest = await getNewestReport(stats);
   const unreachable = IS_LIVE && stats === null;
 
   const contractCriteria = rubric?.subjects.find((s) => s.kind === "contract")?.criteria ?? [];
 
+  /* Every criterion the rubric actually publishes, rather than subjects x 5.
+     The multiplication was right only because both subjects happen to carry
+     five, and would have quietly lied the first time one of them did not. */
+  const criteriaCount = rubric
+    ? rubric.subjects.reduce((total, subject) => total + subject.criteria.length, 0)
+    : null;
+
+  const poolSize = pool ? pool.validators.length : null;
+  const families = pool ? familiesOf(pool) : [];
+  const agreement = rubric?.agreement ?? null;
+
   const counters: Counter[] = [
     {
-      glyph: "#",
       value: stats ? stats.reports : null,
-      label: stats && stats.reports === 1 ? "Report issued" : "Reports issued",
+      label: stats && stats.reports === 1 ? copy.COUNTER_REPORTS_ONE : copy.COUNTER_REPORTS,
     },
-    {
-      glyph: "*",
-      value: rubric ? rubric.subjects.length * 5 : null,
-      label: "Published criteria",
-    },
-    { glyph: "~", value: 0, label: "Fee on a refusal" },
-    // GenLayer's own published set size, labelled as the network's rather than
-    // as something this contract measured.
-    { glyph: "%", value: 1001, label: "Validators in the network" },
+    { value: criteriaCount, label: copy.COUNTER_CRITERIA },
+    { value: 0, label: copy.COUNTER_REFUSAL },
+    /* The pool the app is really talking to, read with the same call the
+       Validators screen uses, so the two can never disagree. */
+    { value: poolSize, label: copy.COUNTER_POOL },
   ];
 
   return (
@@ -56,21 +63,30 @@ export default async function LandingPage() {
 
       <Hero counters={counters} />
 
-      {/* ---------------- the pool marquee ------------------------------- */}
+      {/* ---------------- the pool marquee -------------------------------
+          The model names are the network's own answer to sim_getAllValidators,
+          collapsed to families. Where the node does not answer there is no
+          marquee: a hardcoded list of plausible models is exactly the kind of
+          decoration this product cannot carry, since the whole claim is that
+          the reading is done by somebody other than us.                      */}
       <div className="marquee-wrap">
-        <div
-          className="eyebrow"
-          style={{ margin: "0 auto 16px", padding: "0 var(--gutter)", textAlign: "center" }}
-        >
-          {copy.POOL_LABEL}
-        </div>
-        <div className="marquee" aria-hidden="true">
-          {[...copy.POOL, ...copy.POOL].map((name, i) => (
-            <span key={`${name}-${i}`} className="chip-outline">
-              {name}
-            </span>
-          ))}
-        </div>
+        {families.length ? (
+          <>
+            <div
+              className="eyebrow"
+              style={{ margin: "0 auto 16px", padding: "0 var(--gutter)", textAlign: "center" }}
+            >
+              {copy.POOL_LABEL}
+            </div>
+            <div className="marquee" aria-hidden="true">
+              {[...families, ...families].map((name, i) => (
+                <span key={`${name}-${i}`} className="chip-outline">
+                  {name}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : null}
         <div className="marquee-back" aria-hidden="true">
           {[...copy.POOL_CRITERIA, ...copy.POOL_CRITERIA].map((name, i) => (
             <span key={`${name}-${i}`} className="mono" style={{ fontSize: 11.5, color: "var(--dim)", whiteSpace: "nowrap" }}>
@@ -84,12 +100,15 @@ export default async function LandingPage() {
       <section id="story" className="shell section on-view">
         <div className="split">
           <div>
-            <div className="eyebrow">Story</div>
+            <div className="eyebrow">{copy.HOW_EYEBROW}</div>
+            {/* Heading and lede were the wrong way round here: the section's
+                sentence-long lede was set as the h2 and its four-word heading
+                as the lede, so the eye landed on the smallest line. */}
             <h2 className="h2" style={{ marginTop: 16, maxWidth: "22ch" }}>
-              {copy.HOW_LEDE}
+              {copy.HOW_HEADING}
             </h2>
             <p className="lede" style={{ marginTop: 16, maxWidth: "40ch" }}>
-              A rubric first, then a number
+              {copy.HOW_LEDE}
             </p>
           </div>
           <div className="rows">
@@ -114,7 +133,7 @@ export default async function LandingPage() {
           <div>
             <div className="eyebrow">{copy.CONSENSUS_EYEBROW}</div>
             <h2 className="h2" style={{ marginTop: 16, maxWidth: "22ch" }}>
-              {copy.CONSENSUS_HEADING}
+              {copy.consensusHeading(poolSize)}
             </h2>
             <p className="lede" style={{ marginTop: 16, maxWidth: "42ch" }}>
               {copy.CONSENSUS_BODY}
@@ -127,30 +146,80 @@ export default async function LandingPage() {
               a jury is drawn from the network for every assay
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", gap: 10 }}>
-            {/*
-              The five nodes are illustrative of the mechanism, not a reading of
-              any one assay: a contract cannot count its own jury, and the votes
-              that DID happen are shown on the report itself.
-            */}
-            {[1, 2, 3, 4, 5].map((n) => (
-              <div key={n} className="node-card">
-                <div
-                  className="mono"
-                  style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--dim)" }}
-                >
-                  <span className="dot blink" style={{ background: "#6f6f6f", animationDelay: `${n * 120}ms` }} />
-                  node {String(n).padStart(2, "0")}
-                </div>
-                <div className="mono" style={{ marginTop: 14, fontSize: 26, letterSpacing: "-0.02em", color: "var(--white)" }}>
-                  ?
-                </div>
-                <div className="bar" style={{ marginTop: 10 }}>
-                  <span style={{ width: "100%", opacity: 0.25 }} />
-                </div>
-              </div>
-            ))}
-          </div>
+
+          {/*
+            WHAT USED TO BE HERE: five cards labelled node 01 to node 05, each
+            showing a large question mark over an empty bar. They came from the
+            design, where each held a 9. We cannot hold a 9 -- a validator's
+            vote under Optimistic Democracy is one bit, so no per-node mark
+            exists to read -- and five question marks in a row told the reader
+            nothing at all while occupying the middle of the page.
+
+            What goes there instead is the thing the heading above just claimed:
+            the rule the contract publishes for what "agree" means. It is read
+            from the chain, it was fixed by the deploying transaction, and it is
+            the one part of this mechanism a reader most needs in order to
+            believe the sentence next to it.
+          */}
+          {agreement ? (
+            <div className="card">
+              <div className="eyebrow">{copy.AGREEMENT_EYEBROW}</div>
+              <ul
+                style={{
+                  margin: "18px 0 0",
+                  padding: 0,
+                  listStyle: "none",
+                  display: "grid",
+                  gap: 14,
+                }}
+              >
+                {[
+                  copy.agreementGap(
+                    agreement.max_point_gap,
+                    agreement.max_divergent_criteria,
+                  ),
+                  ...(agreement.band_must_match ? [copy.AGREEMENT_BAND] : []),
+                  ...(agreement.reasons_compared ? [] : [copy.AGREEMENT_REASONS]),
+                  copy.agreementCounted(
+                    agreement.counted_criteria.length,
+                    agreement.judged_criteria.length,
+                  ),
+                ].map((line) => (
+                  <li
+                    key={line}
+                    style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 12 }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        marginTop: 7,
+                        width: 10,
+                        height: 2,
+                        borderRadius: 2,
+                        background: "var(--gold)",
+                      }}
+                    />
+                    <span className="body" style={{ fontSize: 14 }}>
+                      {line}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p
+                className="mono"
+                style={{
+                  margin: "20px 0 0",
+                  paddingTop: 16,
+                  borderTop: "1px solid var(--line)",
+                  fontSize: 11.5,
+                  lineHeight: 1.6,
+                  color: "var(--dim)",
+                }}
+              >
+                {copy.AGREEMENT_NOTE}
+              </p>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -381,7 +450,10 @@ export default async function LandingPage() {
             </div>
           </div>
           <div>
-            <div className="eyebrow">Standard</div>
+            {/* The design's footer calls this column "Standard"; the contract
+                publishes it as `rubric` and the route is /rubric, so the
+                product uses one word for it throughout. */}
+            <div className="eyebrow">Rubric</div>
             <div style={{ marginTop: 14, display: "grid", gap: 10, fontSize: 14 }}>
               <a href="/rubric">Rubric v1</a>
               <a href="/#result">Bands</a>
