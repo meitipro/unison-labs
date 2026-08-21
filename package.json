@@ -1,7 +1,14 @@
 {
-  "name": "touchstone",
+  "name": "unison",
   "version": "0.1.0",
   "private": true,
+  "description": "Contract review scored out of ten against a rubric published before anyone was scored, judged by GenLayer's validators.",
+  "license": "MIT",
+  "homepage": "https://unison-labs.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meitipro/unison-labs.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "next dev -p 4400",
