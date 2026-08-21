@@ -4,7 +4,7 @@ import { WorkspaceHeader } from "../../../../components/WorkspaceShell";
 import * as copy from "../../../../lib/copy";
 import { NETWORK_LABEL } from "../../../../lib/chain";
 import { getStats } from "../../../../lib/touchstone";
-import { POOL_IS_READABLE, getPool, modelLabel } from "../../../../lib/validators";
+import { POOL_IS_READABLE, familiesOf, getPool, modelLabel } from "../../../../lib/validators";
 
 export const metadata: Metadata = {
   title: "Validators - Unison",
@@ -25,12 +25,15 @@ export const revalidate = 60;
  * it exists to establish.
  *
  * What can be shown is real and is more interesting: every validator's address,
- * stake, provider and model, from `sim_getAllValidators`. The count of DISTINCT
- * models is the figure worth reading, because two nodes running one model are
- * not two independent readings of anything.
+ * stake, provider and model, from `sim_getAllValidators`. The figure worth
+ * reading is the count of distinct model FAMILIES, because two nodes running
+ * one model are not two independent readings of anything -- and Studio lists
+ * `openai/gpt-5.4` and `policy:prd-gpt-5-4` as separate entries while both are
+ * the same model behind different routing.
  */
 export default async function ValidatorsPane() {
   const [pool, stats] = await Promise.all([getPool(), getStats()]);
+  const families = pool ? familiesOf(pool) : [];
 
   return (
     <>
@@ -60,9 +63,17 @@ export default async function ValidatorsPane() {
               <div className="ws-fig-n">{pool.validators.length.toLocaleString("en-US")}</div>
               <div className="ws-fig-l">In the pool</div>
             </div>
+            {/* Model STRINGS and model FAMILIES are different counts and the
+                difference matters here: Studio lists `openai/gpt-5.4` and
+                `policy:prd-gpt-5-4` separately, but two nodes on the same
+                underlying model are not two independent readings. Showing only
+                the larger number would overstate how much the jury disagrees
+                with itself by construction. */}
             <div>
-              <div className="ws-fig-n">{pool.models.length}</div>
-              <div className="ws-fig-l">Distinct models</div>
+              <div className="ws-fig-n">{families.length}</div>
+              <div className="ws-fig-l">
+                Model families, across {pool.models.length} entries
+              </div>
             </div>
             <div>
               <div className="ws-fig-n">2n + 1</div>

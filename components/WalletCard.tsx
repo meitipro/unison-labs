@@ -28,6 +28,7 @@ import {
   FAUCET_GEN,
   HAS_PROGRAMMATIC_FAUCET,
   SYMBOL,
+  balanceOf,
   formatUnits,
   requestFunds,
 } from "../lib/funds";
@@ -56,16 +57,46 @@ export default function WalletCard() {
     }
   }, [toast, wallet.address]);
 
+  /**
+   * Ask for testnet GEN, then say what actually happened.
+   *
+   * `sim_fundAccount` ANSWERS WITH A TRANSACTION HASH FOR AN ADDRESS STUDIO
+   * DOES NOT HAVE IN ITS LEDGER, and credits nothing. Measured: a connected
+   * account sat at 0 GEN across a successful call, while the panel announced
+   * "100 GEN credited to this account". A hash is not a receipt here.
+   *
+   * So the balance is read before and after and the message is derived from
+   * the difference, never from the call returning. Studio finalizes funding in
+   * a couple of seconds but not instantly, so a flat reading is re-checked
+   * before it is believed.
+   */
   const faucet = useCallback(async () => {
     if (!wallet.address || funding) return;
+    const address = wallet.address;
     setFunding(true);
     try {
-      await requestFunds(wallet.address, FAUCET_GEN);
+      const before = (await balanceOf(address)) ?? 0n;
+      await requestFunds(address, FAUCET_GEN);
+
+      let after = before;
+      for (let attempt = 0; attempt < 4 && after <= before; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        after = (await balanceOf(address)) ?? before;
+      }
       await wallet.refreshBalance();
-      toast.push({
-        title: `${FAUCET_GEN} ${SYMBOL} credited to this account.`,
-        meta: `${shortAddress(wallet.address)} on ${NETWORK_LABEL}`,
-      });
+
+      if (after > before) {
+        toast.push({
+          title: `${formatUnits(after - before)} ${SYMBOL} credited to this account.`,
+          meta: `${shortAddress(address)} on ${NETWORK_LABEL}`,
+        });
+      } else {
+        toast.push({
+          title: "The faucet accepted the request, but this balance has not moved.",
+          meta: `${shortAddress(address)} is not an account ${NETWORK_LABEL} funds. A review still costs no gas here.`,
+          tone: "fail",
+        });
+      }
     } catch (error) {
       toast.push({ title: readableError(error), tone: "fail" });
     } finally {
@@ -193,7 +224,7 @@ export default function WalletCard() {
       {!REQUIRES_GAS && !wrongChain ? (
         <div className="ws-card-row" style={{ paddingTop: 9, paddingBottom: 11 }}>
           <span style={{ fontSize: 11.5, lineHeight: 1.5, color: "var(--am)" }}>
-            {NETWORK_LABEL} charges no gas, so a review runs whatever this reads.
+            {NETWORK_LABEL} charges no gas, so a review runs whatever this says.
           </span>
         </div>
       ) : null}

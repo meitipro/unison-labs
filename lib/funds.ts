@@ -23,6 +23,12 @@
  *  2. 100 GEN is 1e20 wei, which is past `Number.MAX_SAFE_INTEGER` but is
  *     still exact in a float64 (it is 2^20 x 5^20). Any amount is checked for
  *     that before it is sent rather than assumed.
+ *  3. IT ANSWERS WITH A TRANSACTION HASH FOR AN ADDRESS STUDIO DOES NOT HOLD,
+ *     and credits nothing. Studio's ledger only knows accounts it has seen, so
+ *     an address it has never met stays at zero across a call that looks like
+ *     it worked. A hash from this method is therefore NOT evidence of a
+ *     credit, and no caller may report one from it. `components/WalletCard.tsx`
+ *     reads the balance before and after and says whichever is true.
  *
  * Studio charges no gas, so a balance there is worth showing and is not worth
  * gating anything on. `REQUIRES_GAS` in `lib/chain.ts` is the flag that says
