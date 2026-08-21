@@ -316,6 +316,21 @@ textarea::placeholder {
   box-shadow: -5px 0 0 var(--nav-ink), 5px 0 0 var(--nav-ink);
 }
 
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  height: clamp(36px, 4.5vw, 42px);
+  margin-bottom: clamp(16px, 2.5vh, 26px);
+  padding: 0 clamp(18px, 2vw, 22px);
+  border-radius: 999px;
+  background: var(--chip);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  font-size: clamp(12px, 1.4vw, 13.5px);
+  font-weight: 500;
+  white-space: nowrap;
+  color: #c4c2c3;
+}
+
 .launch {
   flex-shrink: 0;
   height: clamp(44px, 5.2vw, 48px);
@@ -776,62 +791,84 @@ textarea:focus-visible,
 }
 
 /* ---------------------------------------------------------------------------
-   The named-model strip
+   The model strip
    ---------------------------------------------------------------------------
 
-   Was a scrolling marquee of twelve "model families". Sixteen of the twenty
-   nodes in the pool name a ROUTING POLICY, not a model, so most of those chips
-   were this page guessing. Only the models the network commits to are shown,
-   which is a short list, so it is set large and still. Nothing here moves.
+   A marquee of every model the pool can draw on, read from the chain: the four
+   nodes that name one, plus every candidate family inside the sixteen routing
+   policies. Fifteen names, so it earns the scroll.
+
+   TWO COPIES, TRANSLATED BY EXACTLY -50%, so copy two lands where copy one
+   started. That only loops without a gap while ONE COPY IS AT LEAST AS WIDE AS
+   THE VIEWPORT, which is why each copy is its own flex row with min-width:100vw
+   and repeats its list. Without that the chips huddled against the left edge on
+   a wide screen and slid away into empty black.
    --------------------------------------------------------------------------- */
 
 .pool-strip {
-  padding: clamp(30px, 4vw, 46px) var(--gutter);
+  padding: clamp(30px, 4vw, 46px) 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
-.pool-row {
-  margin: 18px auto 0;
-  max-width: var(--shell);
+.pool-strip .eyebrow {
+  padding: 0 var(--gutter);
+  margin-bottom: 22px;
+}
+
+.marquee {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: clamp(10px, 1.4vw, 16px);
+  width: max-content;
+  animation: unmarq 46s linear infinite;
 }
 
-.pool-card {
-  flex: 1 1 auto;
-  min-width: min(100%, 210px);
-  max-width: 300px;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: clamp(20px, 2.4vw, 30px) clamp(16px, 2vw, 26px);
+.marquee-copy {
+  flex: none;
+  min-width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 14px;
+}
+
+.model-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 26px;
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: var(--panel-2);
-  font-size: clamp(16px, 1.5vw, 20px);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-  color: var(--white);
-  transition: border-color 220ms ease, background 220ms ease;
+  font-family: var(--mono);
+  font-size: clamp(14px, 1.2vw, 16px);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--text);
+  transition: border-color 220ms ease, color 220ms ease;
 }
 
-.pool-card:hover {
-  border-color: rgba(var(--gold-rgb), 0.4);
-  background: var(--panel-3);
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+.model-chip:hover {
+  border-color: rgba(var(--gold-rgb), 0.5);
+  color: var(--white);
 }
 
 .pool-foot {
-  margin: 16px auto 0;
+  margin: 24px auto 0;
   max-width: 62ch;
+  padding: 0 var(--gutter);
   text-align: center;
   font-size: 13px;
   line-height: 1.6;
   color: var(--dim);
 }
+
 
 
 /* ---------------------------------------------------------------------------
@@ -1130,6 +1167,7 @@ textarea:focus-visible,
   0% { opacity: 0; clip-path: inset(0 100% 0 0); }
   100% { opacity: 1; clip-path: inset(0 0 0 0); }
 }
+@keyframes unmarq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes unspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 .reveal { animation: reveal 850ms cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -1175,6 +1213,9 @@ textarea:focus-visible,
     opacity: 1 !important;
     transform: none !important;
     filter: none !important;
+  }
+  .marquee {
+    animation: none !important;
   }
 }
 

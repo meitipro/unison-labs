@@ -51,29 +51,30 @@ export const COUNTER_REFUSAL = "Cost of a refusal, in inferences";
 export const COUNTER_POOL = "Validators in the pool";
 
 /**
- * The pool marquee.
+ * The model marquee.
  *
- * The names are READ FROM THE NETWORK, not listed here -- `sim_getAllValidators`
- * publishes every validator's model, and `lib/validators.ts` collapses them to
- * families. The design's list was Claude, GPT, Gemini, Llama, Mistral, DeepSeek,
- * Qwen and "Undisclosed"; the pool this app actually talks to runs no Llama and
- * several models that list never mentions, and nothing about it is undisclosed.
- * Where the node does not answer the marquee is left out entirely rather than
- * falling back to a list, which would be an assertion dressed as a reading.
+ * The names are READ FROM THE NETWORK, never listed here. The design's row was
+ * Claude, GPT, Gemini, Llama, Mistral, DeepSeek, Qwen and "Undisclosed"; the
+ * pool this app talks to runs no Llama, runs several models that list never
+ * mentions, and discloses all of them.
+ *
+ * Where the node does not answer there is no strip at all rather than a
+ * fallback list, which would be an assertion dressed as a reading.
  */
-export const POOL_LABEL = "Models the validator pool commits to";
+export const POOL_LABEL = "Models this pool can draw on";
 export const POOL_UNKNOWN = "The node did not answer, so the pool is not shown.";
 
 /**
- * What the strip does not name.
+ * What the strip is, said underneath it.
  *
- * The rest of the pool runs a routing policy rather than a fixed model, and
- * saying so is more informative than a longer row of names would be: it is the
- * reason two validators can read one file and reach different answers.
+ * The names above are every model the network publishes as reachable: the ones
+ * nodes commit to, plus the candidates inside each routing policy. That is not
+ * the same as saying any given node runs any given one, and this sentence is
+ * where the difference is stated rather than left to be assumed.
  */
-export function poolFoot(routed: number): string {
-  if (routed <= 0) return "Every node in the pool names the model it runs.";
-  return `${routed} more nodes run a routing policy rather than a fixed model, so what they ran is not published.`;
+export function poolFoot(routed: number, named: number): string {
+  if (routed <= 0) return `All ${named} nodes name the model they run.`;
+  return `${named} nodes name the model they run - the other ${routed} run a routing policy that picks one of these per call, so what they ran is not published.`;
 }
 
 export const CONSENSUS_EYEBROW = "Consensus";

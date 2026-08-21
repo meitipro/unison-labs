@@ -21,7 +21,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import Mark from "./Mark";
 import SiteHeader from "./SiteHeader";
 import StoneSlab from "./StoneSlab";
 import * as copy from "../lib/copy";
@@ -183,53 +182,21 @@ export default function Hero({ counters }: { counters: Counter[] }) {
             textAlign: "center",
           }}
         >
-          {/* Three stacked discs and a caption: the three readings. */}
+          {/*
+            THE THREE DISCS ARE GONE. The design stacks three circles each
+            holding the numeral 9 -- three readings landing on the same number.
+            This carried the Unison mark in all three instead, which said
+            nothing (why three logos?) and rendered a 100px mark inside a 42px
+            circle, so the last disc covered the caption beside it.
+
+            A 9 is not ours to draw either: it is a sample score. The caption
+            says the same thing in words, and keeps the design's pill.
+          */}
           <div
-            className="reveal"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              marginBottom: "clamp(16px, 2.5vh, 26px)",
-              animationDelay: "50ms",
-            }}
+            className="reveal hero-pill"
+            style={{ animationDelay: "50ms" }}
           >
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                style={{
-                  display: "grid",
-                  placeItems: "center",
-                  width: "clamp(36px, 4.5vw, 42px)",
-                  height: "clamp(36px, 4.5vw, 42px)",
-                  marginLeft: i === 0 ? 0 : "clamp(-17.6px, -1.89vw, -15.1px)",
-                  padding: 5,
-                  borderRadius: "50%",
-                  background: "var(--chip)",
-                  border: "1px solid rgba(255,255,255,.4)",
-                  zIndex: i + 1,
-                }}
-              >
-                <Mark size={100} disc="#ffffff" bars="var(--gold)" />
-              </span>
-            ))}
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                height: "clamp(36px, 4.5vw, 42px)",
-                marginLeft: "clamp(-17.6px, -1.89vw, -15.1px)",
-                padding: "0 clamp(14px, 1.6vw, 16px) 0 clamp(24px, 2.6vw, 26px)",
-                borderRadius: 999,
-                background: "var(--chip)",
-                border: "1px solid rgba(255,255,255,.4)",
-                fontSize: "clamp(12px, 1.4vw, 13.5px)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                color: "#c4c2c3",
-              }}
-            >
-              {copy.HERO_PILL}
-            </span>
+            {copy.HERO_PILL}
           </div>
 
           <h1

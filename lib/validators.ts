@@ -166,3 +166,31 @@ export function commitment(pool: Pool): { named: number; routed: number } {
   const named = pool.validators.filter((v) => v.namesAModel).length;
   return { named, routed: pool.validators.length - named };
 }
+
+/**
+ * Every model this pool can actually put on a file, named.
+ *
+ * Two published sources, both read off the chain, neither of them a guess:
+ *
+ *   the four nodes that NAME a model  -- `openai/gpt-5.4` and friends
+ *   every `family_eq` in every policy -- the candidates a routing policy is
+ *                                        allowed to pick from
+ *
+ * The union is what the network says may read your contract. It is not a claim
+ * about any one node, which is why the strip is labelled "can draw on" rather
+ * than "runs", and why the caption underneath says how many nodes commit.
+ *
+ * `claude-sonnet-4-6` and `claude-sonnet-4.6` are the same model spelled two
+ * ways by two providers, so a trailing `-<digits>` after a digit is folded to a
+ * point. `gemma-4-31b-it` is left alone: that trailing `-it` is not a version.
+ */
+export function allModels(pool: Pool): string[] {
+  const seen = new Set<string>();
+  const push = (raw: string) => {
+    const bare = raw.includes("/") ? raw.slice(raw.indexOf("/") + 1) : raw;
+    seen.add(bare.replace(/(\d)-(\d+)$/, "$1.$2"));
+  };
+  for (const model of pool.named) push(model);
+  for (const validator of pool.validators) validator.candidates.forEach(push);
+  return [...seen].sort((a, b) => a.localeCompare(b));
+}

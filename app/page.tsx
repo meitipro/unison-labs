@@ -21,9 +21,15 @@ import * as copy from "../lib/copy";
 import * as fmt from "../lib/format";
 import { IS_LIVE, NETWORK_LABEL, TOUCHSTONE, explorerAddress, HAS_EXPLORER } from "../lib/chain";
 import { getNewestReport, getRubric, getStats } from "../lib/touchstone";
-import { commitment, getPool, namedModels } from "../lib/validators";
+import { allModels, commitment, getPool } from "../lib/validators";
 
 export const revalidate = 60;
+
+/** The list laid end to end `times` over, so one marquee copy outruns a
+ *  normal desktop and keeps its designed gap rather than being stretched. */
+function repeat<T>(items: T[], times: number): T[] {
+  return Array.from({ length: times }, () => items).flat();
+}
 
 export default async function LandingPage() {
   const [rubric, stats, pool] = await Promise.all([getRubric(), getStats(), getPool()]);
@@ -40,8 +46,9 @@ export default async function LandingPage() {
     : null;
 
   const poolSize = pool ? pool.validators.length : null;
-  const named = pool ? namedModels(pool) : [];
-  const routed = pool ? commitment(pool).routed : 0;
+  const models = pool ? allModels(pool) : [];
+  const counts = pool ? commitment(pool) : { named: 0, routed: 0 };
+  const routed = counts.routed;
   const agreement = rubric?.agreement ?? null;
 
   const counters: Counter[] = [
@@ -74,19 +81,34 @@ export default async function LandingPage() {
           Only the four nodes that name a concrete model are represented here.
           That is a short list, so it is set large and still rather than
           padded out and slid past.                                          */}
-      {named.length ? (
+      {/* ---------------- the model strip ---------------------------------
+          Every model the pool can draw on, read from the chain: the four nodes
+          that name one, plus every candidate family inside the sixteen routing
+          policies. Nothing here is a family this page inferred -- an earlier
+          version collapsed `policy:prd-grok` to "Grok", which stood for a node
+          that may well have run GPT-5.4.                                     */}
+      {models.length ? (
         <div className="pool-strip">
           <div className="eyebrow" style={{ textAlign: "center" }}>
             {copy.POOL_LABEL}
           </div>
-          <div className="pool-row">
-            {named.map((name) => (
-              <div key={name} className="pool-card">
-                {name}
+          <div className="marquee" aria-hidden="true">
+            {[0, 1].map((copyIndex) => (
+              <div key={copyIndex} className="marquee-copy">
+                {repeat(models, 2).map((name, i) => (
+                  <span key={`${name}-${i}`} className="model-chip">
+                    {name}
+                  </span>
+                ))}
               </div>
             ))}
           </div>
-          <p className="pool-foot">{copy.poolFoot(routed)}</p>
+          {/* The names are readable to a screen reader here rather than in the
+              duplicated, animated strip above. */}
+          <p className="pool-foot">
+            <span className="sr-only">{models.join(", ")}. </span>
+            {copy.poolFoot(routed, counts.named)}
+          </p>
         </div>
       ) : null}
 
