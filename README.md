@@ -11,7 +11,7 @@ scored, and judged by the network rather than by us.
 [![GenLayer](https://img.shields.io/badge/GenLayer-Intelligent%20Contract-101216?style=flat-square)](https://genlayer.com)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-101216?style=flat-square)](https://nextjs.org)
 [![MIT](https://img.shields.io/badge/license-MIT-101216?style=flat-square)](LICENSE)
-[![Launch Tweet](https://x.com/Infer_node/status/20909493076837420210)](LaunchTweet)
+[![Launch Tweet](https://x.com/Infer_node/status/20909493076837420210)](https://x.com/Infer_node/status/20909493076837420210))
 
 **[Open the live site](https://unisonlabs.tech)** &nbsp;-&nbsp;
 [Run a review](https://unisonlabs.tech/app) &nbsp;-&nbsp;
