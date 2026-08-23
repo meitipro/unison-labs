@@ -196,6 +196,10 @@ export const SAMPLES: Array<{ label: string; file: string }> = [
   { label: "a careful contract", file: "careful.py" },
   { label: "one that settles too loosely", file: "loose.py" },
   { label: "one that isn't an Intelligent Contract", file: "plain.py" },
+  /* Written to score well under a scorer that counts characters, and to do
+     none of the work. Every marker sits in a comment, a docstring or a string
+     constant, so the tree finds nothing and it lands at 1/10. */
+  { label: "one written to game the score", file: "decoy.py" },
 ];
 
 /** {ids} is the comma separated list of missing required checks. */
