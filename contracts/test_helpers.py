@@ -1025,5 +1025,65 @@ check_true(
     all(M["pick_mark"](_ballot, c)[0] in (0, 1, 2) for c in _ballot["ids"]),
 )
 
+
+# ---------------------------------------------------------------------------
+# A counted reason has to read like a sentence somebody wrote.
+#
+# The reasons interpolate their own evidence, and seven of them glued a count
+# to a fixed noun, so a report carried "2 validator pair run" and "1 raises".
+# The mark was right and the sentence was not, which is the cheapest possible
+# way to have a correct score dismissed.
+
+check("one of a thing is singular", M["count_of"](1, "raise", "raises"), "1 raise")
+check("more than one is plural", M["count_of"](43, "raise", "raises"), "43 raises")
+check("none of it is plural too", M["count_of"](0, "raise", "raises"), "0 raises")
+
+# Every counted reason, over the range of counts each branch can actually see,
+# read against the two mistakes that are detectable without a dictionary.
+def _reason_reads(text):
+    # Deliberately no regular expression. The one written here first carried a
+    # literal backspace where its word boundary was meant to be, so it matched
+    # nothing at all, and a check that never looks at anything passes every time.
+    words = text.replace(",", " ").split()
+    for i, w in enumerate(words[:-1]):
+        if not w.isdigit():
+            continue
+        noun = words[i + 1]
+        if w == "1" and noun.endswith("s") and not noun.endswith("ss"):
+            return False, f"singular count on a plural noun: {w} {noun}"
+        if w != "1" and noun.endswith("e") and noun + "s" in text:
+            return False, f"plural count on a singular noun: {w} {noun}"
+    if " 1 " in text and " are " in text:
+        return False, "one of something, described as several"
+    return True, ""
+
+
+# The guard has to be able to fail, or it is decoration rather than a check.
+check("the guard catches a singular count on a plural noun", _reason_reads("1 raises, classified")[0], False)
+check("  and catches 2 validator pair run", _reason_reads("2 validator pair run")[0], False)
+check("  while a correct plural passes", _reason_reads("43 raises, classified")[0], True)
+check("  and a correct singular passes", _reason_reads("1 raise, and a timeout")[0], True)
+
+_sources = {
+    "one of each": _careful,
+    "the decoy": _decoy,
+}
+for _label, _src in _sources.items():
+    for _cid in ("agreement", "untrusted", "boundary", "failure"):
+        _ok, _why = _reason_reads(mark(_src, _cid)[1])
+        check_true(f"{_cid} reads properly on {_label}" + ("" if _ok else f" -- {_why}"), _ok)
+
+# The two counts that used to break it, driven directly.
+check(
+    "a single validator pair takes a singular verb",
+    "1 validator pair runs" in M["count_of"](1, "validator pair runs", "validator pairs run"),
+    True,
+)
+check(
+    "two of them take a plural noun",
+    M["count_of"](2, "validator pair runs", "validator pairs run"),
+    "2 validator pairs run",
+)
+
 print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()

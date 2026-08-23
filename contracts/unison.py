@@ -842,6 +842,17 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
     return 0, "not a counted site criterion"
 
 
+def count_of(n: int, one: str, many: str) -> str:
+    """`1 raise`, `43 raises`, with the verb carried along by the caller.
+
+    A counted reason is the only thing standing between a number and the person
+    it is about, so it has to read like a sentence somebody wrote. Gluing a
+    count to a fixed noun gives `1 raises` and `2 validator pair run`, which
+    reads as a bug in the marker and invites the score to be dismissed with it.
+    """
+    return f"{int(n)} {one if int(n) == 1 else many}"
+
+
 def facts_mark(cid: str, source: str) -> tuple[int, str]:
     """The score and reason for one counted criterion, read from the syntax
     tree rather than from the characters.
@@ -882,7 +893,10 @@ def facts_mark(cid: str, source: str) -> tuple[int, str]:
         if strict > 0 and prompts > 0 and custom == 0:
             return 0, "strict equality is applied over a model call, with no validator pair"
         if custom > 0 and reads_leader > 0:
-            return 2, f"{custom} validator pair run, and the validator reads the leader's result"
+            return 2, (
+                f"{count_of(custom, 'validator pair runs', 'validator pairs run')},"
+                f" and the validator reads the leader's result"
+            )
         if custom > 0:
             return 1, "a validator pair is run but its body never reads the argument it is handed"
         if prompted > 0:
@@ -893,7 +907,10 @@ def facts_mark(cid: str, source: str) -> tuple[int, str]:
         if prompts == 0:
             return 1, "no prompt is executed, so no external text reaches a model to be fenced"
         if fences > 0:
-            return 2, f"{fences} angle-bracket replacements run before a prompt is built"
+            return 2, (
+                f"{count_of(fences, 'angle-bracket replacement runs', 'angle-bracket replacements run')}"
+                f" before a prompt is built"
+            )
         if clips > 0:
             return 1, "text is sliced before the prompt, which changes its length but not its shape"
         return 0, "external text reaches an executed prompt with its structure intact"
@@ -904,17 +921,32 @@ def facts_mark(cid: str, source: str) -> tuple[int, str]:
         if blocks <= 3 and copies > 0:
             return 2, "the calls are grouped and stored state is copied to memory before a block"
         if blocks <= 3:
-            return 1, f"{blocks} blocks are grouped, but no stored state is copied to memory first"
-        return 0, f"{blocks} non-deterministic blocks are called across the flow"
+            return 1, (
+                f"{count_of(blocks, 'block is', 'blocks are')} grouped,"
+                f" but no stored state is copied to memory first"
+            )
+        return 0, (
+            f"{count_of(blocks, 'non-deterministic block is', 'non-deterministic blocks are')}"
+            f" called across the flow"
+        )
 
     if cid == "failure":
         if raises == 0:
             return 0, "nothing raises, so every path assumes the happy one"
         if raises >= 2 and classified > 0 and statuses > 0:
-            return 2, f"{raises} raises, classified for a validator, and a status field is read"
+            return 2, (
+                f"{count_of(raises, 'raise', 'raises')}, classified for a validator,"
+                f" and a status field is read"
+            )
         if raises >= 2 and (classified > 0 or statuses > 0):
-            return 1, f"{raises} raises, but the classification or the status read is missing"
-        return 1, f"{raises} raise, and a timeout or an empty answer is not addressed"
+            return 1, (
+                f"{count_of(raises, 'raise', 'raises')},"
+                f" but the classification or the status read is missing"
+            )
+        return 1, (
+            f"{count_of(raises, 'raise', 'raises')},"
+            f" and a timeout or an empty answer is not addressed"
+        )
 
     # Unreachable for the published rubric, and a real answer rather than a
     # crash if a criterion is ever moved between the two halves.

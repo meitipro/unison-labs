@@ -29,7 +29,15 @@ export const META_DESCRIPTION =
 /** The hero, two dotted lines. */
 export const HERO_LINE_1 = "One Contract";
 export const HERO_LINE_2 = "One Agreed Number";
-export const HERO_PILL = "Five validators, one agreed number";
+/*
+ * No count here, deliberately. It said "Five validators", which is true of
+ * this network today and is not read from anywhere, so it would go quietly
+ * wrong the day an assay draws a different number or the chain changes under
+ * it -- a hardcoded number in the first line of a site whose whole claim is
+ * that its numbers are read rather than written. The counters below the hero
+ * name the real pool, from the chain.
+ */
+export const HERO_PILL = "Marked independently, agreed once";
 export const LAUNCH = "Launch the dApp";
 
 export const HERO_LEDE =

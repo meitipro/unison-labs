@@ -808,6 +808,22 @@ function ReportPanel({
             <span>source</span>
             <span style={{ overflowWrap: "anywhere" }}>{fmt.url(report.source_url, 40)}</span>
           </div>
+          {/*
+            Whether the url above can be followed back to these exact bytes.
+            The permalink carried this from the start and this pane did not,
+            which put it on every screen except the one somebody actually
+            lands on after paying for a review -- and the url beside it is
+            clipped to 40 characters, so the commit sits in the middle of the
+            part that gets cut.
+          */}
+          {report.revision ? (
+            <div>
+              <span>revision</span>
+              <span style={{ overflowWrap: "anywhere" }}>
+                {copy.revisionNote(report.revision, report.revision_ref ?? "")}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <p
