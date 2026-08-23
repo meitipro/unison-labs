@@ -260,8 +260,19 @@ export function finalized(id: number): string {
   return `Finalized - report ${id}`;
 }
 
-export function contested(criterion: string): string {
-  return `The submitter contested ${criterion}. The score stands and the dispute is recorded.`;
+export function contested(c: {
+  criterion: string;
+  was: number;
+  now: number;
+  outcome: "upheld" | "superseded";
+}): string {
+  // Anyone may appeal, so naming the submitter here was wrong twice over: it
+  // was not necessarily them, and it made a route open to the author of the
+  // code read as though it were closed.
+  if (c.outcome === "superseded") {
+    return `${c.criterion} was appealed and re-marked by a fresh jury, which read the same bytes against the same anchors and scored it ${c.now} where the original said ${c.was}, so this report supersedes that one.`;
+  }
+  return `${c.criterion} was appealed, and a fresh jury re-marked it against the same anchors and reached ${c.now} again, so the original mark stands.`;
 }
 
 export const RUBRIC_EYEBROW = "Published before anyone was scored";

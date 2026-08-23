@@ -92,7 +92,8 @@ export default async function ReportPage({ params }: Params) {
     for (const criterion of subject.criteria) names[criterion.id] = criterion.name;
   }
 
-  const contested = report.contest?.criterion;
+  const contest = report.contest;
+  const contested = contest?.criterion;
 
   return (
     <>
@@ -142,9 +143,9 @@ export default async function ReportPage({ params }: Params) {
         ))}
       </div>
 
-      {contested ? (
+      {contest ? (
         <p className="body" style={{ marginTop: 16 }}>
-          {copy.contested(contested)}
+          {copy.contested(contest)}
         </p>
       ) : null}
 

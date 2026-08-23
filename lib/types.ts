@@ -99,7 +99,21 @@ export type Report = {
   };
   /** One or two. There is never an empty slot, a dash or a zero for a missing site. */
   subjects: ReportSubject[];
-  contest?: { criterion: string; at: string; by: string };
+  /**
+   * An appeal, when one has been heard. `outcome` is the whole point: a fresh
+   * jury re-marked the disputed criterion against the same published anchors,
+   * and either landed on the same score or did not. `was` and `now` are kept
+   * apart so a superseded report still shows what it used to say.
+   */
+  contest?: {
+    criterion: string;
+    at: string;
+    by: string;
+    was: number;
+    now: number;
+    outcome: "upheld" | "superseded";
+    reason: string;
+  };
 };
 
 export type SplitRow = {

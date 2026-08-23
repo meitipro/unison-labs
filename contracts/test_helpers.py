@@ -973,5 +973,57 @@ check(
     True,
 )
 
+
+# ---------------------------------------------------------------------------
+# Reading one criterion back out of a ballot.
+#
+# An appeal handles two shapes in the same breath: the stored report, whose
+# subjects carry a list of `marks`, and a fresh ballot, which is three parallel
+# lists. `contest` read the report's shape off the ballot for its whole life,
+# so the lookup found nothing, the score stayed where it was, and every appeal
+# was recorded as upheld -- proven on chain by an appeal that came back with an
+# empty reason for a criterion whose report reason was a full sentence.
+#
+# So these run against a ballot `assemble` actually built, rather than a dict
+# written out by hand, which is the part that would have caught it.
+
+_judged_site = M["_judged_ids"]("site")
+_ballot = M["assemble"](
+    "site",
+    "accepted then finalized, 0x1234 on studio, source on github",
+    {
+        "scores": [1] * len(_judged_site),
+        "reasons": ["because the page says so"] * len(_judged_site),
+    },
+)
+
+check("a ballot carries no marks key at all", "marks" in _ballot, False)
+check("  it carries ids, scores and reasons", sorted(_ballot.keys()), ["ids", "reasons", "scores"])
+check("a judged criterion is found in it", M["pick_mark"](_ballot, "overreach")[0], 1)
+check_true("  and carries its reason", M["pick_mark"](_ballot, "overreach")[1] != "")
+check("a counted criterion is found in it too", M["pick_mark"](_ballot, "provenance")[0], 2)
+check_true(
+    "  with the reason the count wrote",
+    "address" in M["pick_mark"](_ballot, "provenance")[1],
+)
+check_raises(
+    "a criterion the ballot does not carry refuses, rather than reporting no change",
+    lambda: M["pick_mark"](_ballot, "agreement"),
+)
+check_raises(
+    "  and so does an empty ballot",
+    lambda: M["pick_mark"]({}, "overreach"),
+)
+check_raises(
+    "  and one whose lists are shorter than its ids",
+    lambda: M["pick_mark"]({"ids": ["overreach"], "scores": [], "reasons": []}, "overreach"),
+)
+# The failure mode being guarded: a lookup that returns a score unchanged is
+# indistinguishable from a genuine uphold, so silence is not an option here.
+check_true(
+    "every id on a ballot is readable",
+    all(M["pick_mark"](_ballot, c)[0] in (0, 1, 2) for c in _ballot["ids"]),
+)
+
 print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()

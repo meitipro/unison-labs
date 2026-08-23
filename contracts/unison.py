@@ -1185,6 +1185,32 @@ def assemble(kind: str, body: str, judged: dict) -> dict:
     return {"ids": ids, "scores": scores, "reasons": reasons}
 
 
+def pick_mark(ballot: dict, cid: str) -> tuple[int, str]:
+    """One criterion's score and reason out of a ballot, or a refusal.
+
+    A ballot is three parallel lists -- `ids`, `scores`, `reasons` -- and NOT a
+    list of mark objects. The report carries the mark-object form, built from
+    this one when the report is written, and the two shapes are easy to confuse
+    because an appeal handles both in the same breath: the stored report, and a
+    fresh ballot for the criterion under dispute.
+
+    Reading the wrong shape here is silent and worse than a crash, because the
+    natural failure of `for m in ballot.get("marks", [])` is an empty loop,
+    which leaves the score untouched and the appeal recorded as upheld. That
+    is a dispute that could never change the number, dressed as one that could,
+    so an id this ballot does not carry raises instead of quietly agreeing.
+    """
+    ids = [str(i) for i in ballot.get("ids", [])]
+    scores = [int(x) for x in ballot.get("scores", [])]
+    reasons = [str(r) for r in ballot.get("reasons", [])]
+    if cid not in ids:
+        raise gl.vm.UserError(f"{ERROR_LLM} the appeal ballot had no mark for {cid}")
+    at = ids.index(cid)
+    if at >= len(scores) or at >= len(reasons):
+        raise gl.vm.UserError(f"{ERROR_LLM} the appeal ballot had no mark for {cid}")
+    return int(scores[at]), clean_reason(reasons[at])
+
+
 def _compare_user_errors(mine: typing.Any, theirs: typing.Any) -> bool:
     """A transient failure need only be transient on both sides; two nodes need
     not see the same flavour of a host being down. Everything else is
@@ -1877,12 +1903,7 @@ class Unison(gl.Contract):
                 if str(mark.get("id")) == key:
                     was = int(mark.get("score", 0))
 
-        now = was
-        reason = ""
-        for mark in ballot.get("marks", []):
-            if str(mark.get("id")) == key:
-                now = int(mark.get("score", 0))
-                reason = clean_reason(str(mark.get("reason", "")))
+        now, reason = pick_mark(ballot, key)
 
         upheld = now == was
         self.contest_of[str(rid)] = json.dumps(
