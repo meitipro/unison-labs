@@ -245,9 +245,9 @@ export const CARD_1_TITLE = "Why two numbers";
 export const CARD_1_BODY =
   "They are never averaged. A careful contract behind a site that calls a transaction done the moment it is sent is a different problem from a weak contract behind an honest site, and one number would hide it.";
 
-export const CARD_2_TITLE = "What a 10 means";
+export const CARD_2_TITLE = "What the number is";
 export const CARD_2_BODY =
-  "Ten out of ten on every criterion in the published rubric, agreed by validators who each read the source independently. It is the strongest reading a static review can give, and it puts a reviewer straight to the parts worth their attention.";
+  "A sum of five marks against anchors published before anything was scored, each one derived from the executable structure of the source or judged by validators who read it independently, so the number says where this file sits against a fixed standard rather than against whatever else was reviewed that week.";
 
 export function nodesDisagreed(criterion: string): string {
   return `The validators did not agree on ${criterion}, so no report was issued and the fee was returned. That means the anchor is written badly, which is our problem rather than yours.`;
@@ -307,10 +307,10 @@ export const APP_URL_LABEL = "Raw file URL";
 export const APP_SITE_LABEL = "Site, optional and scored separately";
 
 /** A GitHub page url serves markup; the raw one serves the source. */
-export const GITHUB_CONVERTED = "A GitHub link, so this is what gets read:";
+export const GITHUB_CONVERTED = "A GitHub link, so the raw file is fetched instead:";
 
 export const SOURCE_NOTE =
-  "A raw file url, or the GitHub page you are looking at - either works. Validators fetch it themselves and record its digest, so the file they read is the file the report is about.";
+  "A raw file url, or the GitHub page you are looking at - either works, and a branch is resolved to the commit it points at when you submit, so the report cites something that cannot be repointed later.";
 
 /** The ceiling, stated before a file is chosen rather than after. */
 export function sourceCeiling(limit: number): string {
