@@ -25,11 +25,10 @@ scored, and judged by the network rather than by us.
 | | |
 | --- | --- |
 | Site | https://unisonlabs.tech |
-| Contract | [`0xf21a97af77685CC10dcB076dEE646C51fC2f4BfF`](https://explorer-studio.genlayer.com/address/0xf21a97af77685CC10dcB076dEE646C51fC2f4BfF) on GenLayer **studionet** |
+| Contract | [`0xCa870B1a314Bc4432b78acae1e478e1E3f85A94c`](https://explorer-studio.genlayer.com/address/0xCa870B1a314Bc4432b78acae1e478e1E3f85A94c) on GenLayer **studionet** |
 | Rubric | v1, frozen by the transaction that deployed the contract |
-| A mark it has issued | [report 8801](https://unisonlabs.tech/r/8801) - a real contract at 6/10, and its site separately at 3/10 |
 
-`npm run match -- 0xf21a97af77685CC10dcB076dEE646C51fC2f4BfF` checks the
+`npm run match -- 0xCa870B1a314Bc4432b78acae1e478e1E3f85A94c` checks the
 deployed bytes against `contracts/unison.py` byte for byte.
 
 Line endings are pinned to LF in `.gitattributes` precisely so that check is
@@ -61,6 +60,13 @@ five contract criteria are derived in deterministic code from the agreed bytes,
 so every validator reaches the same number and the same reason without spending
 an inference, and the rest go to the jury, with the rubric page and `rubric()`
 both saying which is which.
+
+**A counted mark is read from the syntax tree, not from the characters.** The
+source is parsed and the marks come from nodes Python would execute, so a call
+named in a comment, a docstring or a string literal contributes nothing, and
+`public/fixtures/decoy.py` is kept as the proof: it mentions `strict_eq` twice,
+`run_nondet` three times and two raises, all of them inert, and it scores zero
+on every counted criterion.
 
 ---
 
@@ -145,7 +151,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   166 checks over its pure half, on plain CPython
+contracts/test_helpers.py   184 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing

@@ -858,5 +858,69 @@ if FAILURES:
         print(f"   x {failure}\n")
     raise SystemExit(1)
 
+# ---------------------------------------------------------------------------
+# Scoring validity: a mark comes from code, not from characters.
+#
+# `decoy.py` is written to score well under a substring scorer and to do none
+# of the work. Every marker sits in a comment, a docstring or a string
+# constant, so a counter of characters finds strict_eq twice, run_nondet three
+# times, exec_prompt twice, two raises and a copy_to_memory, while the syntax
+# tree finds none of them.
+# ---------------------------------------------------------------------------
+
+_decoy = M["normalise"](fixture("decoy.py"))
+_decoy_facts = M["analyse"](_decoy)
+
+check_true(
+    "the decoy is full of markers a substring scorer would count",
+    _decoy.count("gl.vm.run_nondet") >= 3
+    and _decoy.count("gl.eq_principle.strict_eq") >= 2
+    and _decoy.count("raise gl.vm.UserError") >= 2,
+)
+check("  and the tree finds no equivalence principle", _decoy_facts["strict"], 0)
+check("  no validator pair", _decoy_facts["custom"], 0)
+check("  no executed prompt", _decoy_facts["prompts"], 0)
+check("  and nothing that raises", _decoy_facts["raises"], 0)
+
+for _cid, _want in (("agreement", 0), ("boundary", 0), ("failure", 0)):
+    check(f"  so {_cid} scores nothing on the decoy", mark(_decoy, _cid)[0], _want)
+
+# A validator that takes the leader's result and ignores it is a pair in shape
+# and a rubber stamp in fact. No count of characters can tell those apart.
+_reads = """
+def leader() -> str:
+    return gl.nondet.web.render("https://x", mode="text")
+
+def validator(leaders_result: str) -> bool:
+    return leaders_result.strip() != ""
+
+out = gl.vm.run_nondet(leader, validator)
+"""
+_ignores = _reads.replace("return leaders_result.strip() != \"\"", "return True")
+
+check("a validator that reads the leader's result scores full", mark(_reads, "agreement")[0], 2)
+check("  and one that ignores it does not", mark(_ignores, "agreement")[0], 1)
+check_true(
+    "  and the reason says which it was",
+    "never reads the argument" in mark(_ignores, "agreement")[1],
+)
+
+# A file Python will not accept is not scored as though it were code.
+_broken = "def oops(:\n    gl.vm.run_nondet(a, b)\n"
+check("an unparseable file is not read as code", M["analyse"](_broken)["parsed"], False)
+for _cid in ("agreement", "untrusted", "boundary", "failure"):
+    check(f"  {_cid} scores nothing on it", mark(_broken, _cid)[0], 0)
+check_true(
+    "  and says why",
+    "not valid Python" in mark(_broken, "agreement")[1],
+)
+
+# The counted half stays deterministic: the same bytes give the same table.
+check(
+    "analysing the same source twice gives the same table",
+    M["analyse"](_careful) == M["analyse"](_careful),
+    True,
+)
+
 print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()

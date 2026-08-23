@@ -71,3 +71,57 @@ export function rawSourceUrl(input: string): string {
 export function isGithubPage(input: string): boolean {
   return rawSourceUrl(input) !== (input || "").trim();
 }
+
+const SHA = /^[0-9a-f]{40}$/i;
+
+/** The owner, repo, ref and path of a raw GitHub url, or null. */
+function partsOf(url: string): { owner: string; repo: string; ref: string; path: string } | null {
+  const marker = "raw.githubusercontent.com/";
+  const at = url.toLowerCase().indexOf(marker);
+  if (at === -1) return null;
+  const parts = url.slice(at + marker.length).split("/").filter(Boolean);
+  if (parts.length < 4) return null;
+  let [owner, repo, ref, ...rest] = parts;
+  if (ref === "refs" && rest.length >= 3) {
+    ref = rest[1];
+    rest = rest.slice(2);
+  }
+  return { owner, repo, ref, path: rest.join("/") };
+}
+
+/** True where the url already names a commit rather than a branch. */
+export function isPinned(url: string): boolean {
+  const p = partsOf((url || "").trim());
+  return !!p && SHA.test(p.ref);
+}
+
+/**
+ * Turn a branch url into a commit url, so the report cites something permanent.
+ *
+ * A report against `.../main/x.py` describes whatever was on that branch at
+ * the moment it was marked, and the branch moves the next time anyone pushes,
+ * so the permalink then hands a reader a mark for bytes that are no longer
+ * there. The digest recorded on the report is the real identity and cannot
+ * drift, but a citation nobody can follow is half a citation.
+ *
+ * GitHub's commits endpoint answers with the sha the ref points at right now.
+ * It is public, unauthenticated, and rate limited, so a failure here is not
+ * treated as fatal: the submission goes ahead against the branch, and the
+ * report records `revision: moving` rather than pretending otherwise.
+ */
+export async function pinRevision(url: string): Promise<string> {
+  const text = (url || "").trim();
+  const p = partsOf(text);
+  if (!p || SHA.test(p.ref)) return text;
+
+  try {
+    const api = `https://api.github.com/repos/${p.owner}/${p.repo}/commits/${encodeURIComponent(p.ref)}`;
+    const response = await fetch(api, { headers: { Accept: "application/vnd.github.sha" } });
+    if (!response.ok) return text;
+    const sha = (await response.text()).trim();
+    if (!SHA.test(sha)) return text;
+    return `https://raw.githubusercontent.com/${p.owner}/${p.repo}/${sha}/${p.path}`;
+  } catch {
+    return text;
+  }
+}

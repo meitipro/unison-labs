@@ -46,7 +46,7 @@ import {
   type GateSpec,
 } from "../lib/gate";
 import { getGateSpec, getReportByDigest, getSplitForDigest } from "../lib/unison";
-import { rawSourceUrl, isGithubPage } from "../lib/sourceUrl";
+import { rawSourceUrl, isGithubPage, isPinned, pinRevision } from "../lib/sourceUrl";
 import { useWallet } from "../lib/wallet";
 import { readableError } from "../lib/voice";
 import { assay, type Outcome, type Stage, type Votes } from "../lib/writes";
@@ -124,9 +124,16 @@ export default function AppConsole({
 
       setPhase({ at: "preparing" });
 
+      // Cite a commit rather than a branch. A report filed against `main`
+      // describes bytes that move the next time anyone pushes, so the branch
+      // is resolved to the sha it points at before anything is fetched or
+      // recorded. A failure here is not fatal: the submission goes ahead and
+      // the contract records the reference as moving.
+      const pinned = await pinRevision(url);
+
       let text = "";
       try {
-        const response = await fetch(url, { headers: { Accept: "text/plain, */*" } });
+        const response = await fetch(pinned, { headers: { Accept: "text/plain, */*" } });
         if (!response.ok) {
           setPhase({
             at: "unreadable",
@@ -212,7 +219,7 @@ export default function AppConsole({
       try {
         outcome = await assay(
           account,
-          url,
+          pinned,
           siteUrl.trim(),
           (stage) =>
             setPhase((current) => (current.at === "working" ? { ...current, stage } : current)),

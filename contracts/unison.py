@@ -27,6 +27,7 @@ on-chain bytes cost, and a build diary is not part of a published standard.
 
 from genlayer import *
 
+import ast
 import hashlib
 import json
 import typing
@@ -490,6 +491,228 @@ def _judged_ids(kind: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Reading the source as code rather than as text.
+#
+# WHY THIS EXISTS. Every counted criterion used to be decided by
+# `source.count("gl.vm.run_nondet(")` and friends. That counts a mention, not a
+# call: a line in a comment, a name inside a docstring and a url in a string
+# literal all scored exactly like working code, so a file could be written to
+# pass without doing any of the things the rubric asks about. A mark has to
+# come from what the file would EXECUTE.
+#
+# `ast` is available on a node -- probed on Studio before this was written, and
+# it correctly found two real calls in a sample carrying four textual mentions
+# of one. Parsing is deterministic, so every validator building this table from
+# the agreed bytes builds the identical table without spending an inference.
+#
+# A file that does not parse is not scored as though it were code. `analyse`
+# reports `parsed = False` and every counted criterion answers 0 with that as
+# the reason, which is the honest reading of a file Python itself will not
+# accept.
+# ---------------------------------------------------------------------------
+
+
+def _dotted(node: typing.Any) -> str:
+    """`gl.vm.run_nondet` for an Attribute chain, or "" for anything else.
+
+    Written against Name and Attribute only. A call on a subscript or a call
+    result is not a dotted name and is deliberately not guessed at.
+    """
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return ""
+    parts.append(node.id)
+    parts.reverse()
+    return ".".join(parts)
+
+
+def _fn_name(node: typing.Any) -> str:
+    """The dotted name a Call is calling, or ""."""
+    return _dotted(node.func) if isinstance(node, ast.Call) else ""
+
+
+def _reads_its_argument(fn: typing.Any) -> bool:
+    """Does this function body actually reference its own first parameter?
+
+    This is the whole point of the `agreement` criterion. A validator half
+    written as `def v(leader): return True` takes the leader's result and
+    ignores it, which is a validator pair in shape and a rubber stamp in fact.
+    Counting the string `leaders_res` could never tell those apart.
+    """
+    if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return False
+    args = fn.args.args or fn.args.posonlyargs or fn.args.kwonlyargs
+    if not args:
+        return False
+    first = args[0].arg
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Name) and node.id == first and isinstance(node.ctx, ast.Load):
+            return True
+    return False
+
+
+def analyse(source: str) -> dict:
+    """Structural facts about a contract, counted from its syntax tree.
+
+    Every number here is a count of nodes Python would execute. Comments and
+    string literals contribute nothing, by construction rather than by filter.
+    """
+    facts = {
+        "parsed": False,
+        "strict": 0,
+        "prompted": 0,
+        "custom": 0,
+        "prompts": 0,
+        "web": 0,
+        "validator_reads_leader": 0,
+        "fences": 0,
+        "clips": 0,
+        "raises": 0,
+        "user_errors": 0,
+        "classified": 0,
+        "statuses": 0,
+        "copies": 0,
+        "nondet_blocks": 0,
+    }
+
+    try:
+        tree = ast.parse(source)
+    except Exception:
+        return facts
+    facts["parsed"] = True
+
+    # Every function defined at any depth, by name, so a call that passes one
+    # by reference can be resolved back to its body.
+    functions: dict[str, typing.Any] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            functions.setdefault(node.name, node)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Raise):
+            facts["raises"] += 1
+            exc = node.exc
+            if _fn_name(exc) == "gl.vm.UserError" or _dotted(exc) == "gl.vm.UserError":
+                facts["user_errors"] += 1
+            # A prefix constant handed to the error, so a validator can compare
+            # failures by class rather than by wording.
+            for inner in ast.walk(node):
+                if isinstance(inner, ast.Constant) and isinstance(inner.value, str):
+                    if inner.value.startswith("[") and inner.value.endswith("]"):
+                        facts["classified"] += 1
+                elif isinstance(inner, ast.Name) and inner.id.startswith("ERROR_"):
+                    facts["classified"] += 1
+
+        if isinstance(node, ast.Attribute) and node.attr == "status":
+            facts["statuses"] += 1
+
+        if not isinstance(node, ast.Call):
+            continue
+
+        name = _fn_name(node)
+        if name == "gl.eq_principle.strict_eq":
+            facts["strict"] += 1
+        elif name in ("gl.eq_principle.prompt_comparative", "gl.eq_principle.prompt_non_comparative"):
+            facts["prompted"] += 1
+        elif name in ("gl.vm.run_nondet", "gl.vm.run_nondet_unsafe"):
+            facts["custom"] += 1
+            # The second argument is the validator half. Resolve it to a real
+            # function and ask whether it reads what it was handed.
+            if len(node.args) >= 2:
+                target = node.args[1]
+                fn = None
+                if isinstance(target, ast.Name):
+                    fn = functions.get(target.id)
+                elif isinstance(target, ast.Lambda):
+                    fn = None  # a lambda validator cannot be resolved reliably
+                if fn is not None and _reads_its_argument(fn):
+                    facts["validator_reads_leader"] += 1
+        elif name == "gl.nondet.exec_prompt":
+            facts["prompts"] += 1
+        elif name in ("gl.nondet.web.render", "gl.nondet.web.get"):
+            facts["web"] += 1
+        elif name == "gl.storage.copy_to_memory":
+            facts["copies"] += 1
+        elif name.endswith(".replace") and len(node.args) >= 2:
+            # A fence only counts when it is replacing a prompt delimiter.
+            first = node.args[0]
+            if isinstance(first, ast.Constant) and first.value in ("<", ">"):
+                facts["fences"] += 1
+
+    # Slicing that shortens text before it is used, counted as a real Subscript
+    # with an upper bound rather than as the characters "[:".
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Slice):
+            if node.slice.upper is not None and node.slice.lower is None:
+                facts["clips"] += 1
+
+    facts["nondet_blocks"] = facts["strict"] + facts["prompted"] + facts["custom"]
+    return facts
+
+
+# ---------------------------------------------------------------------------
+# What a report is a report ABOUT.
+#
+# A url is not an identity. `raw.githubusercontent.com/o/r/main/x.py` names
+# whatever is on that branch this morning, so a report filed against it
+# describes code that can be replaced the moment it is published, and the
+# permalink then points somebody at a mark for bytes that no longer exist.
+#
+# Two things fix that together, and the report carries both:
+#
+#   digest    the sha256 of the agreed bytes. This is the real identity, it is
+#             already recorded, and it cannot drift.
+#   revision  whether the URL ITSELF is pinned. A 40-character commit sha is
+#             permanent; a branch or a tag is not.
+#
+# The contract does not refuse a moving reference, because plenty of legitimate
+# sources have no revision concept at all. It records which kind it was, so a
+# reader can tell a permanent citation from a snapshot, and the interface
+# resolves a GitHub branch to its commit before submitting so the common case
+# is pinned without anybody thinking about it.
+# ---------------------------------------------------------------------------
+
+_HEX = "0123456789abcdef"
+
+
+def _is_sha(ref: str) -> bool:
+    """A full git object id, which names one tree for ever."""
+    if len(ref) != 40:
+        return False
+    for ch in ref.lower():
+        if ch not in _HEX:
+            return False
+    return True
+
+
+def revision_of(url: str) -> tuple[str, str]:
+    """`(kind, ref)` for a source url.
+
+    kind is `pinned` when the url names an immutable revision, `moving` when it
+    names something that can be repointed, and `opaque` when the host has no
+    revision in its paths at all.
+    """
+    lowered = (url or "").strip().lower()
+    marker = "raw.githubusercontent.com/"
+    at = lowered.find(marker)
+    if at == -1:
+        return "opaque", ""
+
+    rest = url[at + len(marker):]
+    parts = [p for p in rest.split("/") if p]
+    # owner / repo / ref / path...
+    if len(parts) < 4:
+        return "opaque", ""
+    ref = parts[2]
+    if ref == "refs" and len(parts) >= 6:
+        ref = parts[4]
+    return ("pinned", ref) if _is_sha(ref) else ("moving", ref)
+
+
 def _count(text: str, *needles: str) -> int:
     return sum(text.count(needle) for needle in needles)
 
@@ -570,63 +793,71 @@ def evidence_of(kind: str, body: str) -> list[tuple[str, str]]:
 
 
 def facts_mark(cid: str, source: str) -> tuple[int, str]:
-    """The score and reason for one counted criterion."""
-    strict = _count(source, "gl.eq_principle.strict_eq")
-    prompted = _count(
-        source,
-        "gl.eq_principle.prompt_comparative",
-        "gl.eq_principle.prompt_non_comparative",
-    )
-    custom = _count(source, "gl.vm.run_nondet(", "gl.vm.run_nondet_unsafe(")
-    prompts = _count(source, "gl.nondet.exec_prompt")
-    blocks = strict + prompted + custom
-    reads_leader = _count(source, "leaders_res", "leader_result", "leaders_result")
-    fences = _count(source, '.replace("<"', ".replace('<'")
-    clips = _count(source, "[:limit]", "[:MAX", "[:max", "truncat", "clip")
-    raises = _count(source, "raise gl.vm.UserError")
-    classified = _count(source, "[EXPECTED]", "[EXTERNAL]", "[TRANSIENT]", "[LLM_ERROR]")
-    statuses = _count(source, ".status")
-    copies = _count(source, "copy_to_memory")
+    """The score and reason for one counted criterion, read from the syntax
+    tree rather than from the characters.
+
+    Every number below is a count of nodes Python would execute. A call named
+    in a comment, a docstring or a string literal contributes nothing, which is
+    the difference between marking a contract and marking a file that mentions
+    the right words.
+    """
+    f = analyse(source)
+
+    if not f["parsed"]:
+        return 0, "the file is not valid Python, so nothing in it can be read as code"
+
+    strict = f["strict"]
+    prompted = f["prompted"]
+    custom = f["custom"]
+    prompts = f["prompts"]
+    blocks = f["nondet_blocks"]
+    reads_leader = f["validator_reads_leader"]
+    fences = f["fences"]
+    clips = f["clips"]
+    raises = f["user_errors"] or f["raises"]
+    classified = f["classified"]
+    statuses = f["statuses"]
+    copies = f["copies"]
 
     if cid == "agreement":
         if blocks == 0:
-            return 0, "no equivalence principle and no validator pair anywhere in the source"
+            return 0, "no equivalence principle is called and no validator pair is run"
         if strict > 0 and prompts > 0 and custom == 0:
-            return 0, "strict equality is applied with a model call present and no validator pair"
+            return 0, "strict equality is applied over a model call, with no validator pair"
         if custom > 0 and reads_leader > 0:
-            return 2, "a leader and validator pair is written, and the validator reads the leader's result"
+            return 2, f"{custom} validator pair run, and the validator reads the leader's result"
         if custom > 0:
-            return 1, "a validator pair exists but never reads the leader's result to compare against"
+            return 1, "a validator pair is run but its body never reads the argument it is handed"
         if prompted > 0:
-            return 1, "a prompt-based principle is chosen, which compares by model rather than by field"
-        return 1, "strict equality is declared, over output the source does not first collapse"
+            return 1, "a prompt-based principle is called, which compares by model rather than by field"
+        return 1, "strict equality is called, over output the source does not first collapse"
 
     if cid == "untrusted":
         if prompts == 0:
-            return 1, "nothing is prompted, so no external text reaches a model to be fenced"
+            return 1, "no prompt is executed, so no external text reaches a model to be fenced"
         if fences > 0:
-            return 2, "angle brackets are replaced before the prompt is built"
+            return 2, f"{fences} angle-bracket replacements run before a prompt is built"
         if clips > 0:
-            return 1, "text is clipped before the prompt, which changes its length but not its shape"
-        return 0, "external text reaches the prompt with its structure intact"
+            return 1, "text is sliced before the prompt, which changes its length but not its shape"
+        return 0, "external text reaches an executed prompt with its structure intact"
 
     if cid == "boundary":
         if blocks == 0:
-            return 0, "no non-deterministic block is declared at all"
+            return 0, "no non-deterministic block is called at all"
         if blocks <= 3 and copies > 0:
             return 2, "the calls are grouped and stored state is copied to memory before a block"
         if blocks <= 3:
-            return 1, "the calls are grouped, but no stored state is copied to memory first"
-        return 0, f"{blocks} non-deterministic blocks are spread through the flow"
+            return 1, f"{blocks} blocks are grouped, but no stored state is copied to memory first"
+        return 0, f"{blocks} non-deterministic blocks are called across the flow"
 
     if cid == "failure":
         if raises == 0:
             return 0, "nothing raises, so every path assumes the happy one"
         if raises >= 2 and classified > 0 and statuses > 0:
-            return 2, f"{raises} readable errors, classified for a validator, and a status code is checked"
+            return 2, f"{raises} raises, classified for a validator, and a status field is read"
         if raises >= 2 and (classified > 0 or statuses > 0):
-            return 1, f"{raises} readable errors, but the classification or the status check is missing"
-        return 1, f"{raises} error raised, and a timeout or an empty answer is not addressed"
+            return 1, f"{raises} raises, but the classification or the status read is missing"
+        return 1, f"{raises} raise, and a timeout or an empty answer is not addressed"
 
     # Unreachable for the published rubric, and a real answer rather than a
     # crash if a criterion is ever moved between the two halves.
@@ -1383,6 +1614,7 @@ class Unison(gl.Contract):
         accepts.
         """
         source_url = _clean_url(source_url, "contract source")
+        _rev_kind, _rev_ref = revision_of(source_url)
         site = (site_url or "").strip()
         if site:
             site = _clean_url(site, "site")
@@ -1425,6 +1657,10 @@ class Unison(gl.Contract):
             "source_url": source_url,
             "site_url": site,
             "digest": digest,
+            # What this report is a report ABOUT. The digest is the identity;
+            # `revision` says whether the url alongside it is permanent.
+            "revision": _rev_kind,
+            "revision_ref": _rev_ref,
             "source_chars": len(source),
             "gate": {
                 "passed": checked["passed"],
@@ -1508,10 +1744,17 @@ class Unison(gl.Contract):
 
     @gl.public.write
     def contest(self, report_id: int, criterion: str) -> None:
-        """Dispute one criterion on a report you submitted.
+        """Appeal one criterion on a report, and have it marked again.
 
-        It marks; it never hides. The score stands and the streak is drawn
-        unchanged -- greying out a score somebody argued with flatters them.
+        Open to anyone, because the party with the strongest reason to dispute
+        a mark is whoever wrote the code, and they are rarely the account that
+        paid for the review.
+
+        The appeal re-fetches the same bytes -- refusing outright if the source
+        has moved since -- and puts the disputed criterion to a fresh jury
+        against the same published anchors. Agreement upholds the original.
+        Disagreement supersedes it, with the previous score kept on the appeal
+        note rather than erased.
         """
         rid = int(report_id)
         index = rid - FIRST_REPORT_ID
@@ -1538,18 +1781,84 @@ class Unison(gl.Contract):
             )
 
         sender = gl.message.sender_address.as_hex
-        if str(record.get("submitter", "")).lower() != sender.lower():
-            raise gl.vm.UserError(
-                f"{ERROR_EXPECTED} report {rid} was not submitted by this account"
-            )
         if self.contest_of.get(str(rid)) is not None:
             raise gl.vm.UserError(f"{ERROR_EXPECTED} report {rid} is already contested")
 
+        # ANYONE MAY APPEAL, not only the account that paid for the review.
+        # The person with the strongest reason to dispute a mark is whoever
+        # wrote the code, and they are usually not the person who submitted it,
+        # so restricting this to the submitter left the one party the report is
+        # actually about with no route at all.
+
+        # An appeal RE-MARKS. The original stands unless a fresh jury, reading
+        # the same agreed bytes against the same published anchors, reaches a
+        # different answer for the disputed criterion -- at which point the
+        # report is superseded and says so. A dispute that could never change
+        # the number is a complaints box, not recourse.
+        source_url = str(record.get("source_url", ""))
+        source = fetch_source(source_url)
+        if digest_of(source) != str(record.get("digest", "")):
+            raise gl.vm.UserError(
+                f"{ERROR_EXPECTED} the source at that url is no longer the source"
+                f" report {rid} was written about"
+            )
+
+        kind = "site"
+        for subject in record.get("subjects", []):
+            for mark in subject.get("marks", []):
+                if str(mark.get("id")) == key:
+                    kind = str(subject.get("kind", "contract"))
+
+        if kind == "site":
+            ballot = mark_site(str(record.get("site_url", "")))
+        else:
+            ballot = mark_contract(source_url, source)
+
+        was = 0
+        for subject in record.get("subjects", []):
+            for mark in subject.get("marks", []):
+                if str(mark.get("id")) == key:
+                    was = int(mark.get("score", 0))
+
+        now = was
+        reason = ""
+        for mark in ballot.get("marks", []):
+            if str(mark.get("id")) == key:
+                now = int(mark.get("score", 0))
+                reason = clean_reason(str(mark.get("reason", "")))
+
+        upheld = now == was
         self.contest_of[str(rid)] = json.dumps(
             {
                 "criterion": key,
                 "at": str(gl.message_raw["datetime"]),
                 "by": sender,
+                "was": was,
+                "now": now,
+                "outcome": "upheld" if upheld else "superseded",
+                "reason": reason,
             },
             sort_keys=True,
         )
+
+        if upheld:
+            return
+
+        # The mark changed, so the record changes with it. The original score
+        # is kept on the appeal note above rather than erased, because a report
+        # that quietly rewrites itself is worth no more than one that cannot be
+        # argued with at all.
+        for subject in record.get("subjects", []):
+            total = 0
+            for mark in subject.get("marks", []):
+                if str(mark.get("id")) == key:
+                    mark["score"] = now
+                    if reason:
+                        mark["reason"] = reason
+                total += int(mark.get("score", 0))
+            if any(str(m.get("id")) == key for m in subject.get("marks", [])):
+                subject["total"] = total
+                subject["band"] = band_of(total)
+
+        record["superseded_at"] = str(gl.message_raw["datetime"])
+        self.reports[index] = json.dumps(record, sort_keys=True)
