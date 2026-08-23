@@ -131,8 +131,14 @@ export const getReport = cache(async function getReport(id: number): Promise<Rep
  * source for the gate anyway, so it can hash it and ask whether the chain has
  * seen those exact bytes before spending anything.
  */
-export async function getReportByDigest(digest: string): Promise<Report | null> {
-  const raw = await read("report_by_digest", [digest]);
+export async function getReportByDigest(
+  digest: string,
+  siteUrl: string,
+): Promise<Report | null> {
+  // The site is half the identity of a review, so it is half the key. Passing
+  // the digest alone would ask a question the contract no longer answers, and
+  // get a null that reads as "never reviewed" for every source that was.
+  const raw = await read("report_by_digest", [digest, (siteUrl || "").trim()]);
   if (!raw || raw === '""' || raw === "") return null;
   return parse<Report>(raw);
 }

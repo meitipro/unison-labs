@@ -26,7 +26,7 @@ scored, and judged by the network rather than by us.
 | --- | --- |
 | Site | https://unisonlabs.tech |
 | Contract | [`0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75`](https://explorer-studio.genlayer.com/address/0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75) on GenLayer **studionet** |
-| Rubric | v1, frozen by the transaction that deployed the contract |
+| Rubric | v2, frozen by the transaction that deployed the contract |
 
 `npm run match -- 0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75` checks the
 deployed bytes against `contracts/unison.py` byte for byte.
@@ -133,21 +133,32 @@ question was one a count could answer:
 
 | decided by | criteria |
 | --- | --- |
-| `facts` | `agreement`, `untrusted`, `boundary`, `failure`, `finality`, `provenance` |
-| `judgment` | `necessity`, `mechanism`, `overreach`, `recourse` |
+| `facts` | `agreement`, `untrusted`, `boundary`, `failure`, `finality`, `provenance`, `recourse` |
+| `judgment` | `necessity`, `mechanism`, `overreach` |
 
 The counted contract criteria are read out of the agreed bytes in deterministic
 code, so every validator derives them identically by construction, and the same
 source settled on the first try afterwards, with the measurements in
 [docs/judgment-layer.md](docs/judgment-layer.md).
 
-The site half needed the same treatment later, for the same reason. It ran five
-judged criteria and nothing counted, and a real assay then finalized 3 votes to
-2, one vote from being suspended. `finality` and `provenance` are presence
-checks wearing a judgement's clothes - does the page name both accepted and
-finalized, does it show an address, a network and a link to the source - so they
-are decided in code now, and the same submission came back 3 agree with nothing
-against it.
+The site half needed the same treatment later, for the same reason, and it took
+two passes. It ran five judged criteria and nothing counted, and a real assay
+finalized 3 votes to 2, one vote from being suspended. `finality` and
+`provenance` are presence checks wearing a judgement's clothes - does the page
+name both accepted and finalized, does it show an address, a network and a link
+to the source - so they are decided in code.
+
+Three judged criteria against a tolerance that allows one of them to move was
+still too thin, and a later assay finalized 3 to 2 again, this time against two
+validators who actively disagreed. `recourse` went the same way, and its own
+anchors say why it could: nowhere mentioned, mentioned without who or when, or
+the window and the cost and who may act all stated. That is a presence check
+written out longhand, and the jury had been answering it as one - a live report
+reads "no losing path, appeal, dispute, contest, window, deadline or actor is
+stated", which is the anchors read back at the price of an inference and a vote
+that could go either way.
+
+One site criterion now carries the tolerance instead of three.
 
 ---
 
@@ -159,7 +170,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   235 checks over its pure half, on plain CPython
+contracts/test_helpers.py   253 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
@@ -242,7 +253,7 @@ npm run dev            # http://localhost:4400
 ```
 
 ```bash
-npm test               # 31 node tests + 235 pure-half contract checks
+npm test               # 31 node tests + 253 pure-half contract checks
 npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```

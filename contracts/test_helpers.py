@@ -542,9 +542,9 @@ check(
     ["necessity"],
 )
 check(
-    "and three site criteria are, the other two being presence checks",
+    "and two site criteria are, the other three being presence checks",
     M["_judged_ids"]("site"),
-    ["mechanism", "overreach", "recourse"],
+    ["mechanism", "overreach"],
 )
 check(
     "every criterion declares which half decides it",
@@ -1147,6 +1147,95 @@ check_true("a rewritten reason still respects the cap", len(M["clean_reason"](_l
 _p = M["build_prompt"]("contract", "https://example.com/x.py", "def f():\n    pass\n")
 check_true("the prompt forbids naming its own blocks", "cannot see this prompt" in _p)
 check_true("  and says what to write instead", "Write about the source only" in _p)
+
+
+# ---------------------------------------------------------------------------
+# The third site criterion a presence check settles.
+#
+# An assay finalized 3 votes to 2 -- disagreeing, not idle -- with three judged
+# site criteria against a tolerance that allows one of them to move. The jury
+# was answering recourse as a count anyway: a live report reads "no losing
+# path, appeal, dispute, contest, window, deadline or actor is stated", which
+# is the anchors read out loud at the price of an inference and a vote.
+
+check(
+    "a page with no losing path scores nothing",
+    site_mark("recourse", "we grade your work and pay out fast")[0],
+    0,
+)
+check(
+    "an appeal with a window, a cost and an actor is the full mark",
+    site_mark(
+        "recourse",
+        "anyone may appeal within 7 days for a small fee, and the dispute is re-run",
+    )[0],
+    2,
+)
+check(
+    "an appeal with nothing said about who or when is partial",
+    site_mark("recourse", "decisions can be appealed")[0],
+    1,
+)
+check_true(
+    "  and the partial mark names what was missing",
+    "who may start one" in site_mark("recourse", "decisions can be appealed")[1],
+)
+check(
+    "a dispute counts as a losing path too",
+    site_mark("recourse", "you may dispute the result")[0],
+    1,
+)
+check(
+    "capitals do not change the mark",
+    site_mark("recourse", "Anyone May Appeal Within 7 Days For A Fee")[0],
+    2,
+)
+check("recourse is published as counted", M["DECIDED_BY"]["recourse"], "facts")
+check(
+    "one site criterion is left with the jury",
+    M["_judged_ids"]("site"),
+    ["mechanism", "overreach"],
+)
+
+# ---------------------------------------------------------------------------
+# One table, one punctuation.
+
+check(
+    "a judged reason loses its full stop",
+    M["clean_reason"]("the page never mentions an appeal, dispute, or a losing path."),
+    "the page never mentions an appeal, dispute, or a losing path",
+)
+check(
+    "a reason ending in a call keeps its dots",
+    M["clean_reason"]("no gl.nondet.web.*"),
+    "no gl.nondet.web.*",
+)
+check(
+    "an ellipsis is left alone",
+    M["clean_reason"]("the page trails off..."),
+    "the page trails off...",
+)
+check(
+    "a reason with no full stop is untouched",
+    M["clean_reason"]("43 raises, classified for a validator"),
+    "43 raises, classified for a validator",
+)
+
+# ---------------------------------------------------------------------------
+# What a review is the same review as.
+#
+# The dedupe was the source digest alone, so the same bytes behind a different
+# page were refused and the submitter sent to a report whose site marks are
+# about somebody else's site -- and anyone could spend one fee on a popular
+# open-source contract with a junk url and leave it holding that forever.
+
+_k = M["subject_key"]
+check("the same source and site are the same review", _k("abc", "x.com") == _k("abc", "x.com"), True)
+check("  a different site is a different review", _k("abc", "x.com") == _k("abc", "y.com"), False)
+check("  different bytes are a different review", _k("abc", "x.com") == _k("def", "x.com"), False)
+check("  no site is its own review", _k("abc", "") == _k("abc", "x.com"), False)
+check("case and padding do not split a key", _k(" ABC ", " X.com "), _k("abc", "x.com"))
+check_true("the digest stays the front of the key", _k("abc", "x.com").startswith("abc"))
 
 print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()

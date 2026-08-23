@@ -183,7 +183,7 @@ export default function AppConsole({
       }
 
       const digest = await digestOf(normalise(text));
-      const existing = await getReportByDigest(digest);
+      const existing = await getReportByDigest(digest, siteUrl.trim());
       if (existing) {
         setPhase({ at: "already", gate, reportId: existing.id });
         return;
@@ -244,7 +244,7 @@ export default function AppConsole({
         return;
       }
 
-      const report = await getReportByDigest(digest);
+      const report = await getReportByDigest(digest, siteUrl.trim());
       if (!report) {
         setPhase({
           at: "refused",

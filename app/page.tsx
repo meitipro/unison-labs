@@ -521,7 +521,12 @@ export default async function LandingPage() {
             color: "var(--dim)",
           }}
         >
-          <span>Rubric v1, judged by the validator set</span>
+          {/* Read, not written. The version was "v1" in the markup while the
+              contract published its own, so the day the rubric moved the
+              footer would have kept insisting it had not. */}
+          <span>
+            {rubric ? `Rubric ${rubric.version}, ` : ""}judged by the validator set
+          </span>
           <span>Built on GenLayer</span>
         </div>
       </footer>

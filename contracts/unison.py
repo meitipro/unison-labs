@@ -46,7 +46,7 @@ ERROR_LLM = "[LLM_ERROR]"
 # Fixed quantities, published by `rubric()`: a limit a submitter cannot see is
 # a limit they hit by surprise.
 
-RUBRIC_VERSION = "v1"
+RUBRIC_VERSION = "v2"
 
 #: The first report ever issued. Report ids are meant to be quotable in a
 #: sentence ("see report 8812"), so they do not start at zero.
@@ -298,7 +298,7 @@ DECIDED_BY: dict[str, str] = {
     "mechanism": "judgment",
     "provenance": "facts",
     "overreach": "judgment",
-    "recourse": "judgment",
+    "recourse": "facts",
 }
 
 # ---------------------------------------------------------------------------
@@ -793,7 +793,17 @@ def evidence_of(kind: str, body: str) -> list[tuple[str, str]]:
 
 
 #: The site criteria a presence check can settle, so a model is never asked.
-SITE_COUNTED = ("finality", "provenance")
+SITE_COUNTED = ("finality", "provenance", "recourse")
+
+
+def subject_key(digest: str, site_url: str) -> str:
+    """The identity of a review: the source bytes, and the page beside them.
+
+    Pure and tiny on purpose. The browser derives the same string before it
+    asks whether a report already exists, so the question it asks and the
+    question the contract answers cannot drift apart.
+    """
+    return (digest or "").strip().lower() + "|" + (site_url or "").strip().lower()
 
 
 def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
@@ -838,6 +848,40 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
             missing = "network" if not network else "source"
             return 1, f"an address is shown with no {missing} named beside it"
         return 0, "no contract address appears, so nothing on the page can be checked"
+
+    if cid == "recourse":
+        # Read straight off the published anchors, which describe presence and
+        # nothing else: nowhere mentioned, mentioned without who or when, or
+        # the window and the cost and who may act all stated. The jury used to
+        # decide this and kept answering it as a count anyway -- one live
+        # report reads "no losing path, appeal, dispute, contest, window,
+        # deadline or actor is stated", which is this function, written out by
+        # a model at the price of an inference and a vote it could lose.
+        raised = any(
+            w in lowered
+            for w in ("appeal", "dispute", "contest", "challenge", "object to", "losing")
+        )
+        if not raised:
+            return 0, "no appeal or dispute is mentioned, so the losing path is not on the page"
+        when = any(
+            w in lowered
+            for w in ("window", "deadline", "within ", " days", " hours", "period")
+        )
+        who = any(
+            w in lowered
+            for w in ("anyone", "any holder", "whoever", "who may", "eligible", "submitter", "owner")
+        )
+        cost = any(w in lowered for w in ("fee", "cost", "free", "stake", "deposit", "gas"))
+        if when and who and cost:
+            return 2, "an appeal is described with its window, its cost and who may start one"
+        missing: list[str] = []
+        if not who:
+            missing.append("who may start one")
+        if not when:
+            missing.append("when")
+        if not cost:
+            missing.append("what it costs")
+        return 1, "an appeal is mentioned without saying " + ", or ".join(missing)
 
     return 0, "not a counted site criterion"
 
@@ -1085,6 +1129,12 @@ def clean_reason(raw: typing.Any) -> str:
     text = text.replace("<", "(").replace(">", ")")
     text = unscaffold(text)
     text = " ".join(text.split())
+    # A counted reason never ends in a full stop and a judged one sometimes
+    # does, so the same table prints five rows with and five without. Only a
+    # stop after a letter or a digit goes: `gl.nondet.web.*` and an ellipsis
+    # are left where they are.
+    if text.endswith(".") and len(text) > 1 and (text[-2].isalnum()):
+        text = text[:-1]
     if len(text) > MAX_REASON_CHARS:
         # Clip at a word boundary. A reason is read on every report, and one that
         # stops mid-word ("so the two states are not told ap") reads as a broken
@@ -1583,9 +1633,23 @@ class Unison(gl.Contract):
     #: dataclasses whose field order would then be load bearing forever.
     reports: DynArray[str]
 
-    #: digest -> report id. The reason a second submission of identical bytes
-    #: costs nobody an inference.
+    #: digest -> the FIRST report id written for those bytes. Kept source-only
+    #: because `name_the_split` reads it to answer "did this source settle",
+    #: which is a question about the source and has no site in it.
     by_digest: TreeMap[str, u32]
+
+    #: digest + the site -> report id, and the key a second submission is
+    #: refused against.
+    #:
+    #: The dedupe was on the source alone, which is right for the contract half
+    #: and wrong for the other one: the same bytes behind a different page are a
+    #: different review, and refusing that sent the second submitter to a report
+    #: whose site marks are about somebody else's site. It also handed anyone a
+    #: way to spend one fee on a popular open-source contract with a junk url
+    #: and leave it holding a 0 for provenance forever, with no second report
+    #: possible. Identical source AND identical site still costs nobody an
+    #: inference, so a score still cannot be re-rolled.
+    by_subject: TreeMap[str, u32]
 
     #: criterion id -> how many times the network could not settle it.
     #: Published on the rubric page. A criterion at the top of that table is an
@@ -1689,9 +1753,8 @@ class Unison(gl.Contract):
         return self._with_contest(self.reports[index], int(report_id))
 
     @gl.public.view
-    def report_by_digest(self, digest: str) -> str:
-        key = (digest or "").strip().lower()
-        found = self.by_digest.get(key)
+    def report_by_digest(self, digest: str, site_url: str) -> str:
+        found = self.by_subject.get(subject_key(digest, site_url))
         if found is None:
             return ""
         return self.report(int(found))
@@ -1784,11 +1847,11 @@ class Unison(gl.Contract):
         source = fetch_source(source_url)
         digest = digest_of(source)
 
-        already = self.by_digest.get(digest)
+        already = self.by_subject.get(subject_key(digest, site))
         if already is not None:
             raise gl.vm.UserError(
-                f"{ERROR_EXPECTED} this exact source was already reviewed,"
-                f" see report {int(already)}"
+                f"{ERROR_EXPECTED} this exact source and site were already"
+                f" reviewed, see report {int(already)}"
             )
 
         checked = gate_of(source)
@@ -1836,7 +1899,11 @@ class Unison(gl.Contract):
         }
 
         self.reports.append(json.dumps(record, sort_keys=True, separators=(",", ":")))
-        self.by_digest[digest] = u32(report_id)
+        self.by_subject[subject_key(digest, site)] = u32(report_id)
+        # Source-only, and only the first, so `name_the_split` keeps answering
+        # "did these bytes ever settle" without a site in the question.
+        if self.by_digest.get(digest) is None:
+            self.by_digest[digest] = u32(report_id)
         return u32(report_id)
 
     def _subject(self, kind: str, target: str, ballot: dict) -> dict:
