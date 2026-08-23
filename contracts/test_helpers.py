@@ -387,8 +387,14 @@ check(
     [],
 )
 check_true(
+    # Named through _judged_ids rather than hardcoded, because this pinned
+    # "id=mechanism" and started failing the moment mechanism was counted --
+    # reporting a broken prompt when the prompt was doing exactly its job.
     "the site prompt carries the site criteria and not the contract's",
-    "id=mechanism" in M["build_prompt"]("site", "https://x.test", "x")
+    all(
+        f"id={c}" in M["build_prompt"]("site", "https://x.test", "x")
+        for c in M["_judged_ids"]("site")
+    )
     and "id=agreement" not in M["build_prompt"]("site", "https://x.test", "x"),
 )
 check_true(
@@ -542,9 +548,9 @@ check(
     ["necessity"],
 )
 check(
-    "and two site criteria are, the other three being presence checks",
+    "and one site criterion is, the other four being presence checks",
     M["_judged_ids"]("site"),
-    ["mechanism", "overreach"],
+    ["overreach"],
 )
 check(
     "every criterion declares which half decides it",
@@ -1236,6 +1242,82 @@ check("  different bytes are a different review", _k("abc", "x.com") == _k("def"
 check("  no site is its own review", _k("abc", "") == _k("abc", "x.com"), False)
 check("case and padding do not split a key", _k(" ABC ", " X.com "), _k("abc", "x.com"))
 check_true("the digest stays the front of the key", _k("abc", "x.com").startswith("abc"))
+
+
+# ---------------------------------------------------------------------------
+# The last site criterion a count can settle, and the arithmetic that says why.
+#
+# Two judged marks against a rule that tolerates one of them moving is not a
+# tolerance. Three live assays of one unchanged page bore it out -- mechanism
+# 2, 1, 1 and overreach 1, 0, 0 -- and two of them finalized 3 votes to 2 with
+# validators actively disagreeing, one vote short of suspending the report.
+
+check(
+    "a page that stops at ai scores nothing",
+    site_mark("mechanism", "our AI grades your work on the blockchain")[0],
+    0,
+)
+check(
+    "naming validators without the decision is partial",
+    site_mark("mechanism", "validators review every submission")[0],
+    1,
+)
+check(
+    "naming both is the full mark",
+    site_mark("mechanism", "validators must agree on the same result")[0],
+    2,
+)
+check(
+    "independently counts as saying what they do",
+    site_mark("mechanism", "each validator marks it independently")[0],
+    2,
+)
+check(
+    "consensus is named too",
+    site_mark("mechanism", "consensus decides the outcome")[0],
+    1,
+)
+check("mechanism is published as counted", M["DECIDED_BY"]["mechanism"], "facts")
+
+# ---------------------------------------------------------------------------
+# One judged criterion per ballot, which is what makes the rule hold.
+check("the contract ballot has one", M["_judged_ids"]("contract"), ["necessity"])
+check("the site ballot has one", M["_judged_ids"]("site"), ["overreach"])
+
+# The counted marks are derived identically on every node from the same input,
+# so the ONLY entry two markings can differ on is the judged one. Exhaustively:
+# every pair of scores a single judged criterion can take, against the rule.
+_ids_site = M["_ids_of"]("site")
+_judged_at = _ids_site.index("overreach")
+_counted = [0, 2, 0, 0]  # whatever the counts produce, both sides get the same
+
+
+def _ballot(judged_score):
+    out = list(_counted)
+    out.insert(_judged_at, judged_score)
+    return out
+
+
+_settles = 0
+_splits = []
+for _a in (0, 1, 2):
+    for _b in (0, 1, 2):
+        if M["agreement_holds"](_ballot(_a), _ballot(_b)):
+            _settles += 1
+        else:
+            _splits.append((_a, _b))
+
+check("a point apart on the one judged mark still agrees", M["agreement_holds"](_ballot(1), _ballot(2)), True)
+check("  and so does the other direction", M["agreement_holds"](_ballot(2), _ballot(1)), True)
+check("two points apart is still a split, as published", M["agreement_holds"](_ballot(0), _ballot(2)), False)
+check(
+    "so only the extremes can split a site ballot",
+    sorted(_splits),
+    [(0, 2), (2, 0)],
+)
+# The spread actually observed across three live assays was one point, never
+# two, on every judged criterion. That is the case this now absorbs.
+check("seven of the nine possible pairs settle", _settles, 7)
 
 print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()

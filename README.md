@@ -26,7 +26,7 @@ scored, and judged by the network rather than by us.
 | --- | --- |
 | Site | https://unisonlabs.tech |
 | Contract | [`0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75`](https://explorer-studio.genlayer.com/address/0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75) on GenLayer **studionet** |
-| Rubric | v2, frozen by the transaction that deployed the contract |
+| Rubric | v3, frozen by the transaction that deployed the contract |
 
 `npm run match -- 0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75` checks the
 deployed bytes against `contracts/unison.py` byte for byte.
@@ -133,8 +133,8 @@ question was one a count could answer:
 
 | decided by | criteria |
 | --- | --- |
-| `facts` | `agreement`, `untrusted`, `boundary`, `failure`, `finality`, `provenance`, `recourse` |
-| `judgment` | `necessity`, `mechanism`, `overreach` |
+| `facts` | `agreement`, `untrusted`, `boundary`, `failure`, `finality`, `mechanism`, `provenance`, `recourse` |
+| `judgment` | `necessity`, `overreach` |
 
 The counted contract criteria are read out of the agreed bytes in deterministic
 code, so every validator derives them identically by construction, and the same
@@ -148,8 +148,8 @@ finalized 3 votes to 2, one vote from being suspended. `finality` and
 name both accepted and finalized, does it show an address, a network and a link
 to the source - so they are decided in code.
 
-Three judged criteria against a tolerance that allows one of them to move was
-still too thin, and a later assay finalized 3 to 2 again, this time against two
+Three judged criteria against a tolerance that allows one of them to move is
+not a tolerance, and a later assay finalized 3 to 2 again, this time against two
 validators who actively disagreed. `recourse` went the same way, and its own
 anchors say why it could: nowhere mentioned, mentioned without who or when, or
 the window and the cost and who may act all stated. That is a presence check
@@ -158,7 +158,25 @@ reads "no losing path, appeal, dispute, contest, window, deadline or actor is
 stated", which is the anchors read back at the price of an inference and a vote
 that could go either way.
 
-One site criterion now carries the tolerance instead of three.
+Two was still too many, and the next assay split the same way. Three markings of
+one unchanged page had gone `mechanism` 2, 1, 1 and `overreach` 1, 0, 0, so both
+of the remaining judged marks were moving and only one was allowed to. Widening
+the rule would have settled the transaction while leaving the same page scoring
+3/10 one day and 1/10 the next, which is the thing worth fixing rather than the
+symptom. `mechanism` is counted in v3, and its anchors were **rewritten** rather
+than merely re-decided: the old ones asked where a sentence sat on the page, and
+counting words while claiming to measure position would have been the same
+dishonesty in the other direction.
+
+`overreach` stays with the jury. It holds a claim on the page against the
+methods the contract actually exposes, which is the one question here that no
+count reaches, and it is why this runs on GenLayer at all.
+
+**Every ballot now carries exactly one judged mark**, so two markers can differ
+on at most one criterion by construction, and the published rule covers it. Of
+the nine score pairs a judged criterion can produce, seven agree; only a marker
+answering 0 against one answering 2 still splits, which is what a split should
+mean.
 
 ---
 
@@ -170,7 +188,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   253 checks over its pure half, on plain CPython
+contracts/test_helpers.py   266 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
@@ -253,7 +271,7 @@ npm run dev            # http://localhost:4400
 ```
 
 ```bash
-npm test               # 31 node tests + 253 pure-half contract checks
+npm test               # 31 node tests + 266 pure-half contract checks
 npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```

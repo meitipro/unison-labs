@@ -46,7 +46,7 @@ ERROR_LLM = "[LLM_ERROR]"
 # Fixed quantities, published by `rubric()`: a limit a submitter cannot see is
 # a limit they hit by surprise.
 
-RUBRIC_VERSION = "v2"
+RUBRIC_VERSION = "v3"
 
 #: The first report ever issued. Report ids are meant to be quotable in a
 #: sentence ("see report 8812"), so they do not start at zero.
@@ -229,10 +229,16 @@ SITE_CRITERIA: tuple[Criterion, ...] = (
     (
         "mechanism",
         "The page says what the network decides",
+        # REWRITTEN IN v3, and not only re-decided. The old anchors asked where
+        # a sentence sat -- "named once, somewhere a reader has to go looking",
+        # "stated where the decision is shown" -- which is a real question and
+        # not one a count can answer, so leaving the words alone and counting
+        # them anyway would have been a count pretending to measure position.
+        # These ask what a rendered page can actually be read for.
         (
             "the page says AI, or blockchain, and stops there",
-            "the mechanism is named once, somewhere a reader has to go looking",
-            "the decision the validators make is stated where the decision is shown",
+            "validators are named, without saying what they have to agree on",
+            "the page names the validators and the thing they have to agree on",
         ),
     ),
     (
@@ -295,7 +301,7 @@ DECIDED_BY: dict[str, str] = {
     "boundary": "facts",
     "failure": "facts",
     "finality": "facts",
-    "mechanism": "judgment",
+    "mechanism": "facts",
     "provenance": "facts",
     "overreach": "judgment",
     "recourse": "facts",
@@ -793,7 +799,7 @@ def evidence_of(kind: str, body: str) -> list[tuple[str, str]]:
 
 
 #: The site criteria a presence check can settle, so a model is never asked.
-SITE_COUNTED = ("finality", "provenance", "recourse")
+SITE_COUNTED = ("finality", "mechanism", "provenance", "recourse")
 
 
 def subject_key(digest: str, site_url: str) -> str:
@@ -848,6 +854,24 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
             missing = "network" if not network else "source"
             return 1, f"an address is shown with no {missing} named beside it"
         return 0, "no contract address appears, so nothing on the page can be checked"
+
+    if cid == "mechanism":
+        # The last criterion the site ballot could not settle. Two judged marks
+        # against a rule that tolerates one moving is not a tolerance at all,
+        # and three live assays had both of them move: mechanism 2, 1, 1 and
+        # overreach 1, 0, 0 on one unchanged page. `overreach` stays with the
+        # jury because it holds a claim against the methods the contract
+        # exposes, which no count reaches. This one does not need it.
+        named = any(w in lowered for w in ("validator", "consensus", "quorum"))
+        if not named:
+            return 0, "no validators or consensus are named, so the page stops at ai or blockchain"
+        agrees = any(
+            w in lowered
+            for w in ("agree on", "agree that", "agree about", "must agree", "independently")
+        )
+        if agrees:
+            return 2, "the page names the validators and what they have to agree on"
+        return 1, "validators are named without saying what they have to agree on"
 
     if cid == "recourse":
         # Read straight off the published anchors, which describe presence and
