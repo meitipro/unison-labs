@@ -157,6 +157,17 @@ export default async function ReportPage({ params }: Params) {
             </a>
           </span>
         </div>
+        {/* Whether the url above can be followed back to these bytes. The
+            digest is the identity and never moves; a branch does, so a reader
+            is told which kind of citation they are holding. */}
+        {report.revision ? (
+          <div className="kv-row">
+            <span className="kv-key">revision</span>
+            <span className="kv-val">
+              {copy.revisionNote(report.revision, report.revision_ref ?? "")}
+            </span>
+          </div>
+        ) : null}
         <div className="kv-row">
           <span className="kv-key">digest</span>
           <span className="kv-val">{fmt.digest(report.digest)}</span>

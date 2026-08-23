@@ -100,6 +100,24 @@ export const CONNECTING = "Check your wallet";
 export const GATE_FAILED_MEANS =
   "The gate runs first for exactly this reason. A file missing a required marker is caught here, in the browser, before a validator spends a single inference and before anything is charged.";
 
+/**
+ * What the report is a report about, said on the report.
+ *
+ * A url is not an identity. A branch names whatever is on it this morning, so
+ * a mark filed against one describes bytes that can be replaced the moment it
+ * is published. The digest beside this is the identity and cannot drift; this
+ * line says whether the citation can be followed back to it.
+ */
+export function revisionNote(kind: string, ref: string): string {
+  if (kind === "pinned") {
+    return `pinned to commit ${ref.slice(0, 12)}, which cannot be repointed`;
+  }
+  if (kind === "moving") {
+    return `${ref || "a branch"} moves, so read the digest below as the identity`;
+  }
+  return "this host publishes no revision, so the digest below is the identity";
+}
+
 export const CONSENSUS_EYEBROW = "Consensus";
 
 /**

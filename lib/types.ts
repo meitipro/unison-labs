@@ -80,6 +80,16 @@ export type Report = {
   submitter: string;
   source_url: string;
   site_url: string;
+  /**
+   * Whether the url above names something permanent.
+   *
+   * `pinned` is a commit, which cannot be repointed. `moving` is a branch or a
+   * tag, which can. `opaque` is a host with no revision in its paths at all.
+   * The digest is the report's identity either way; this says whether the
+   * citation beside it can be followed back to the same bytes.
+   */
+  revision?: "pinned" | "moving" | "opaque";
+  revision_ref?: string;
   digest: string;
   source_chars: number;
   gate: {
