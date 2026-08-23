@@ -294,9 +294,9 @@ DECIDED_BY: dict[str, str] = {
     "untrusted": "facts",
     "boundary": "facts",
     "failure": "facts",
-    "finality": "judgment",
+    "finality": "facts",
     "mechanism": "judgment",
-    "provenance": "judgment",
+    "provenance": "facts",
     "overreach": "judgment",
     "recourse": "judgment",
 }
@@ -792,6 +792,56 @@ def evidence_of(kind: str, body: str) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
+#: The site criteria a presence check can settle, so a model is never asked.
+SITE_COUNTED = ("finality", "provenance")
+
+
+def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
+    """Two site marks, counted from the rendered page.
+
+    THE PAGE IS NOT AGREED BYTE FOR BYTE, and deliberately so: two nodes
+    rendering a marketing page a second apart get different html, and demanding
+    they match would refuse every honest submission. Counting from it is still
+    far steadier than asking a model, because these checks are coarse. Whether
+    the word `finalized` appears anywhere on a page does not change between two
+    renders; a model's 0/1/2 opinion about the same page measurably does.
+
+    This is the same medicine the contract half already had. Four of its five
+    criteria stopped being judged and its rounds stopped splitting; all five
+    site criteria stayed with the jury, and a real assay then finalized 3 votes
+    to 2, one vote from being suspended.
+    """
+    lowered = page.lower()
+
+    if cid == "finality":
+        accepted = "accepted" in lowered
+        final = "finaliz" in lowered or "finalis" in lowered
+        if accepted and final:
+            return 2, "the page names accepted and finalized separately, so the wait is visible"
+        if final:
+            return 1, "finality is named but acceptance is not, so the wait between them is not shown"
+        if accepted:
+            return 1, "the page calls acceptance the end and never names finality"
+        return 0, "neither acceptance nor finality is named, so a send reads as done"
+
+    if cid == "provenance":
+        address = "0x" in page
+        network = any(
+            n in lowered for n in ("studio", "bradbury", "asimov", "testnet", "mainnet")
+        )
+        source_link = any(
+            n in lowered for n in ("github", "source code", "view source", ".py")
+        )
+        if address and network and source_link:
+            return 2, "an address, a network and the source are all named on the page"
+        if address:
+            missing = "network" if not network else "source"
+            return 1, f"an address is shown with no {missing} named beside it"
+        return 0, "no contract address appears, so nothing on the page can be checked"
+
+    return 0, "not a counted site criterion"
+
+
 def facts_mark(cid: str, source: str) -> tuple[int, str]:
     """The score and reason for one counted criterion, read from the syntax
     tree rather than from the characters.
@@ -800,7 +850,14 @@ def facts_mark(cid: str, source: str) -> tuple[int, str]:
     in a comment, a docstring or a string literal contributes nothing, which is
     the difference between marking a contract and marking a file that mentions
     the right words.
+
+    Two SITE criteria are counted here as well, from the rendered page rather
+    than from a tree. They are handled first because a web page is not Python
+    and the parse below would refuse it.
     """
+    if cid in SITE_COUNTED:
+        return site_facts_mark(cid, source)
+
     f = analyse(source)
 
     if not f["parsed"]:

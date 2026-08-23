@@ -388,8 +388,13 @@ check(
 )
 check_true(
     "the site prompt carries the site criteria and not the contract's",
-    "id=finality" in M["build_prompt"]("site", "https://x.test", "x")
+    "id=mechanism" in M["build_prompt"]("site", "https://x.test", "x")
     and "id=agreement" not in M["build_prompt"]("site", "https://x.test", "x"),
+)
+check_true(
+    "and a counted site criterion is kept out of it too",
+    "id=finality" not in M["build_prompt"]("site", "https://x.test", "x")
+    and "id=provenance" not in M["build_prompt"]("site", "https://x.test", "x"),
 )
 
 check(
@@ -485,15 +490,61 @@ check(
     [mark(_careful, c) for c in ("agreement", "untrusted", "boundary", "failure")],
 )
 
+# ---------------------------------------------------------------------------
+# The two site criteria a presence check settles.
+#
+# These were judged until a real assay finalized 3 votes to 2, one vote from
+# being suspended, with the contract half already counted and stable and all
+# five site criteria still with the jury.
+
+def site_mark(cid, page):
+    return M["site_facts_mark"](cid, page)
+
+
+check("a page naming both states is told apart", site_mark("finality", "accepted then finalized")[0], 2)
+check("finalized alone is a partial mark", site_mark("finality", "finalized on chain")[0], 1)
+check("accepted alone is a partial mark", site_mark("finality", "accepted, so it is done")[0], 1)
+check("a page naming neither scores zero", site_mark("finality", "your thing is live")[0], 0)
+check_true(
+    "the British spelling counts as finality too",
+    site_mark("finality", "accepted then finalised")[0] == 2,
+)
+check_true(
+    "the check is case insensitive, because a heading is not lowercase",
+    site_mark("finality", "ACCEPTED and FINALIZED")[0] == 2,
+)
+
+FULL = "0xabc contract on studio testnet, source on github"
+check("address, network and source together score two", site_mark("provenance", FULL)[0], 2)
+check("an address with no network is a partial mark", site_mark("provenance", "0xabc is the contract")[0], 1)
+check("no address at all scores zero", site_mark("provenance", "trust us, it is on chain")[0], 0)
+check_true(
+    "a missing network is named in the reason rather than left to guess",
+    "network" in site_mark("provenance", "0xabc on github")[1],
+)
+
+check_true(
+    "a counted site mark never asks a model and so cannot split on one",
+    all(c not in M["_judged_ids"]("site") for c in M["SITE_COUNTED"]),
+)
+check_true(
+    "every counted site reason survives the reason cap",
+    all(
+        len(M["clean_reason"](site_mark(c, p)[1])) <= M["MAX_REASON_CHARS"]
+        for c in M["SITE_COUNTED"]
+        for p in ("", "accepted finalized 0xabc studio github", "nothing here")
+    ),
+)
+
 check(
     "only necessity is left to the jury for a contract",
     M["_judged_ids"]("contract"),
     ["necessity"],
 )
 check(
-    "and all five site criteria are",
+    "and three site criteria are, the other two being presence checks",
     M["_judged_ids"]("site"),
-    ["finality", "mechanism", "provenance", "overreach", "recourse"],
+    ["mechanism", "overreach", "recourse"],
 )
 check(
     "every criterion declares which half decides it",
