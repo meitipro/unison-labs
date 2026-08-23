@@ -25,10 +25,10 @@ scored, and judged by the network rather than by us.
 | | |
 | --- | --- |
 | Site | https://unisonlabs.tech |
-| Contract | [`0xCa870B1a314Bc4432b78acae1e478e1E3f85A94c`](https://explorer-studio.genlayer.com/address/0xCa870B1a314Bc4432b78acae1e478e1E3f85A94c) on GenLayer **studionet** |
+| Contract | [`0xBf628EAD1de6385811032294D8593dEb6e875F9F`](https://explorer-studio.genlayer.com/address/0xBf628EAD1de6385811032294D8593dEb6e875F9F) on GenLayer **studionet** |
 | Rubric | v1, frozen by the transaction that deployed the contract |
 
-`npm run match -- 0xCa870B1a314Bc4432b78acae1e478e1E3f85A94c` checks the
+`npm run match -- 0xBf628EAD1de6385811032294D8593dEb6e875F9F` checks the
 deployed bytes against `contracts/unison.py` byte for byte.
 
 Line endings are pinned to LF in `.gitattributes` precisely so that check is
@@ -133,13 +133,21 @@ question was one a count could answer:
 
 | decided by | criteria |
 | --- | --- |
-| `facts` | `agreement`, `untrusted`, `boundary`, `failure` |
-| `judgment` | `necessity`, and all five site criteria |
+| `facts` | `agreement`, `untrusted`, `boundary`, `failure`, `finality`, `provenance` |
+| `judgment` | `necessity`, `mechanism`, `overreach`, `recourse` |
 
-The counted four are read out of the agreed bytes in deterministic code, so
-every validator derives them identically by construction, and the same source
-settled on the first try afterwards, with the measurements in
+The counted contract criteria are read out of the agreed bytes in deterministic
+code, so every validator derives them identically by construction, and the same
+source settled on the first try afterwards, with the measurements in
 [docs/judgment-layer.md](docs/judgment-layer.md).
+
+The site half needed the same treatment later, for the same reason. It ran five
+judged criteria and nothing counted, and a real assay then finalized 3 votes to
+2, one vote from being suspended. `finality` and `provenance` are presence
+checks wearing a judgement's clothes - does the page name both accepted and
+finalized, does it show an address, a network and a link to the source - so they
+are decided in code now, and the same submission came back 3 agree with nothing
+against it.
 
 ---
 
@@ -151,7 +159,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   184 checks over its pure half, on plain CPython
+contracts/test_helpers.py   197 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
