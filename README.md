@@ -25,10 +25,10 @@ scored, and judged by the network rather than by us.
 | | |
 | --- | --- |
 | Site | https://unisonlabs.tech |
-| Contract | [`0xFeD070f9DE1CCb9EFbD61264EF6150e187144d85`](https://explorer-studio.genlayer.com/address/0xFeD070f9DE1CCb9EFbD61264EF6150e187144d85) on GenLayer **studionet** |
+| Contract | [`0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75`](https://explorer-studio.genlayer.com/address/0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75) on GenLayer **studionet** |
 | Rubric | v1, frozen by the transaction that deployed the contract |
 
-`npm run match -- 0xFeD070f9DE1CCb9EFbD61264EF6150e187144d85` checks the
+`npm run match -- 0x87d8ee409beFE0E15D1dBBfbD7d20C04474fDE75` checks the
 deployed bytes against `contracts/unison.py` byte for byte.
 
 Line endings are pinned to LF in `.gitattributes` precisely so that check is
@@ -159,7 +159,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   224 checks over its pure half, on plain CPython
+contracts/test_helpers.py   235 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
@@ -242,7 +242,7 @@ npm run dev            # http://localhost:4400
 ```
 
 ```bash
-npm test               # 31 node tests + 224 pure-half contract checks
+npm test               # 31 node tests + 235 pure-half contract checks
 npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```

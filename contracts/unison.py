@@ -1015,6 +1015,15 @@ def build_prompt(kind: str, target: str, body: str) -> str:
             "- Every reason must point at the source: name the call, the"
             " construct, or the absence you scored on. Never give advice and"
             " never address the author.",
+            # The reason is printed on a report, under the criterion's public
+            # name, to somebody who never sees this prompt. Naming the parts of
+            # it -- the facts block, the rubric, the anchors -- puts a piece of
+            # scaffolding in the product, where it reads as an internal note
+            # that escaped rather than as a finding about their contract.
+            "- The reason is read by somebody who cannot see this prompt. Write"
+            " about the source only. Never mention the facts, this rubric, the"
+            " anchors, the blocks above, scoring, or being asked to mark"
+            " anything. Say what the source does or does not do, and stop.",
             f"- A reason is one clause in lower case, on one line, at most"
             f" {MAX_REASON_CHARS} characters, with no angle brackets.",
             "",
@@ -1031,12 +1040,50 @@ def build_prompt(kind: str, target: str, body: str) -> str:
     )
 
 
+# Names for the prompt's own furniture, and what they are called out here.
+#
+# The prompt hands a model a <facts> block and tells it those counts are
+# authoritative, so a model doing exactly as it was told writes "no web call in
+# the counted facts" -- correct, and meaningless on a report, where the reader
+# has never heard of a facts block. The prompt now forbids it, and this catches
+# the ones that say it anyway, because a rule a model follows most of the time
+# is not a rule a report can rely on. Longest first, so the specific phrases go
+# before the bare ones.
+SCAFFOLDING: tuple[tuple[str, str], ...] = (
+    ("in the counted facts", "in the source"),
+    ("in the facts block", "in the source"),
+    ("in the source block", "in the source"),
+    ("the counted facts", "the source"),
+    ("the facts block", "the source"),
+    ("the source block", "the source"),
+    ("counted facts", "the source"),
+    ("facts block", "the source"),
+    ("source block", "the source"),
+)
+
+
+def unscaffold(text: str) -> str:
+    """Replace the prompt's furniture with the plain word for it.
+
+    Case-insensitive and without a regular expression, so the same reason comes
+    out of every node character for character.
+    """
+    for phrase, plain in SCAFFOLDING:
+        while True:
+            at = text.lower().find(phrase)
+            if at == -1:
+                break
+            text = text[:at] + plain + text[at + len(phrase):]
+    return text
+
+
 def clean_reason(raw: typing.Any) -> str:
     """A model's prose, reduced to something a report can hold. Structural, so
     no reason carries a newline or an angle bracket into a later prompt."""
     text = raw if isinstance(raw, str) else ("" if raw is None else str(raw))
     text = text.replace("\r", " ").replace("\n", " ").replace("\t", " ")
     text = text.replace("<", "(").replace(">", ")")
+    text = unscaffold(text)
     text = " ".join(text.split())
     if len(text) > MAX_REASON_CHARS:
         # Clip at a word boundary. A reason is read on every report, and one that

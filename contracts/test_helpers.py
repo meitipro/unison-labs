@@ -1085,5 +1085,68 @@ check(
     "2 validator pairs run",
 )
 
+
+# ---------------------------------------------------------------------------
+# The prompt's own furniture, kept out of the product.
+#
+# The prompt hands the model a <facts> block and tells it those counts are
+# authoritative, so a model following that instruction wrote "with no
+# gl.nondet.web.* call in the counted facts" onto a live report, where the
+# reader has never heard of a facts block and cannot see one.
+
+check(
+    "the phrase that reached a live report is rewritten",
+    M["clean_reason"]("uses exec_prompt in submit, with no web call in the counted facts"),
+    "uses exec_prompt in submit, with no web call in the source",
+)
+check(
+    "the facts block is named plainly",
+    M["clean_reason"]("nothing in the facts block shows a raise"),
+    "nothing in the source shows a raise",
+)
+check(
+    "so is the source block",
+    M["clean_reason"]("the source block never fences its input"),
+    "the source never fences its input",
+)
+check(
+    "capitals are caught too",
+    M["clean_reason"]("no call in The Counted Facts"),
+    "no call in the source",
+)
+check(
+    "two mentions in one reason both go",
+    M["clean_reason"]("the facts block and the source block disagree"),
+    "the source and the source disagree",
+)
+check(
+    "a reason that never mentions them is untouched",
+    M["clean_reason"]("43 raises, classified for a validator, and a status field is read"),
+    "43 raises, classified for a validator, and a status field is read",
+)
+check(
+    "the word facts on its own is left alone",
+    M["clean_reason"]("it states facts about its own grading"),
+    "it states facts about its own grading",
+)
+# Every node has to derive the same string, so this cannot depend on anything
+# but the text handed to it.
+check(
+    "rewriting is deterministic",
+    M["clean_reason"]("no web call in the counted facts")
+    == M["clean_reason"]("no web call in the counted facts"),
+    True,
+)
+# The substitution runs before the length clip, so a rewritten reason is still
+# measured at the length it will actually be printed at.
+_long = "a call is absent from the counted facts " + ("x" * M["MAX_REASON_CHARS"])
+check_true("a rewritten reason still respects the cap", len(M["clean_reason"](_long)) <= M["MAX_REASON_CHARS"])
+
+# The prompt says not to do it in the first place, which is the half that keeps
+# the sentence readable rather than merely accurate.
+_p = M["build_prompt"]("contract", "https://example.com/x.py", "def f():\n    pass\n")
+check_true("the prompt forbids naming its own blocks", "cannot see this prompt" in _p)
+check_true("  and says what to write instead", "Write about the source only" in _p)
+
 print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
 print()
