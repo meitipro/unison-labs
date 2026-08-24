@@ -257,12 +257,20 @@ export const CARD_2_TITLE = "What the number is";
 export const CARD_2_BODY =
   "A sum of five marks against anchors published before anything was scored, each one derived from the executable structure of the source or judged by validators who read it independently, so the number says where this file sits against a fixed standard rather than against whatever else was reviewed that week.";
 
+/*
+ * No fee is mentioned, because there is no fee.
+ *
+ * Both of these used to end "and the fee was returned", which is a refund of
+ * something the contract cannot charge: `assay` is a plain public write, every
+ * call goes out with `value: 0n`, and the contract has no way to move value at
+ * all. It read as reassurance and it was a mechanism nobody built.
+ */
 export function nodesDisagreed(criterion: string): string {
-  return `The validators did not agree on ${criterion}, so no report was issued and the fee was returned. That means the anchor is written badly, which is our problem rather than yours.`;
+  return `The validators did not agree on ${criterion}, so no report was issued. That means the anchor is written badly, which is our problem rather than yours.`;
 }
 
 export const NODES_DISAGREED_UNNAMED =
-  "The validators did not agree, so no report was issued and the fee was returned. That means an anchor is written badly, which is our problem rather than yours.";
+  "The validators did not agree, so no report was issued. That means an anchor is written badly, which is our problem rather than yours.";
 
 export function finalized(id: number): string {
   return `Finalized - report ${id}`;

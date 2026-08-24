@@ -63,18 +63,6 @@ const EXEMPT = new Set([
   // This file names all nine in order to ban them.
   join("scripts", "check.mjs"),
 
-  // THE DEPLOYED CONTRACT, and this one is not a style decision.
-  //
-  // Two em dashes live inside `refused before scoring [em dash] missing ...`,
-  // a string the contract raises. Those bytes are deployed at
-  // 0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4: editing them here would put
-  // `npm run match` out of agreement with the live contract, and redeploying
-  // for a dash would strand the reports already filed under that address.
-  //
-  // The screen is still correct. `houseStyle` in lib/writes.ts converts a
-  // refusal on the way out of the receipt, so nobody reads the em dash. Fold
-  // the change into the contract at the next deploy that happens anyway.
-  join("contracts", "unison.py"),
 ]);
 
 function* walk(dir) {

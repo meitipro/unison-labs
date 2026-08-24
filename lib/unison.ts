@@ -131,16 +131,43 @@ export const getReport = cache(async function getReport(id: number): Promise<Rep
  * source for the gate anyway, so it can hash it and ask whether the chain has
  * seen those exact bytes before spending anything.
  */
-export async function getReportByDigest(
+/**
+ * A report, and WHICH KIND OF NOTHING when there is not one.
+ *
+ * `read` already tells the two apart: it returns null when no node answered and
+ * an empty string when the contract answered and holds nothing. Collapsing both
+ * into null loses the only distinction that matters after a transaction has
+ * settled, and the screen that read it then told somebody whose report was
+ * finalized on chain that nothing had been submitted.
+ *
+ * The three states are the product's own rule, applied here rather than assumed
+ * everywhere downstream.
+ */
+export type ReportLookup =
+  | { state: "found"; report: Report }
+  | { state: "none" }
+  | { state: "unreachable" };
+
+export async function lookUpReport(
   digest: string,
   siteUrl: string,
-): Promise<Report | null> {
+): Promise<ReportLookup> {
   // The site is half the identity of a review, so it is half the key. Passing
   // the digest alone would ask a question the contract no longer answers, and
   // get a null that reads as "never reviewed" for every source that was.
   const raw = await read("report_by_digest", [digest, (siteUrl || "").trim()]);
-  if (!raw || raw === '""' || raw === "") return null;
-  return parse<Report>(raw);
+  if (raw === null) return { state: "unreachable" };
+  if (raw === '""' || raw === "") return { state: "none" };
+  const report = parse<Report>(raw);
+  return report ? { state: "found", report } : { state: "none" };
+}
+
+export async function getReportByDigest(
+  digest: string,
+  siteUrl: string,
+): Promise<Report | null> {
+  const found = await lookUpReport(digest, siteUrl);
+  return found.state === "found" ? found.report : null;
 }
 
 export async function getSplitTable(): Promise<SplitRow[] | null> {

@@ -45,7 +45,7 @@ import {
   type GateResult,
   type GateSpec,
 } from "../lib/gate";
-import { getGateSpec, getReportByDigest, getSplitForDigest } from "../lib/unison";
+import { getGateSpec, getReportByDigest, getSplitForDigest, lookUpReport } from "../lib/unison";
 import { rawSourceUrl, isGithubPage, isPinned, pinRevision } from "../lib/sourceUrl";
 import { useWallet } from "../lib/wallet";
 import { readableError } from "../lib/voice";
@@ -67,7 +67,11 @@ type Phase =
   | { at: "working"; gate: GateResult; stage: Stage }
   | { at: "already"; gate: GateResult; reportId: number }
   | { at: "split"; gate: GateResult; why: string; criterion: string }
-  | { at: "refused"; gate: GateResult | null; why: string }
+  /* `needsWallet` is set only by the refusal a connect can actually clear.
+     Without it the button below tested "is there an unconnected wallet",
+     which is true under a gate refusal too, so the one refusal with a next
+     step lent its button to every refusal that has none. */
+  | { at: "refused"; gate: GateResult | null; why: string; needsWallet?: true }
   | { at: "scored"; gate: GateResult; report: Report; votes: Votes | null; provisional: boolean };
 
 export default function AppConsole({
@@ -197,7 +201,12 @@ export default function AppConsole({
       if (!account) {
         account = await wallet.connect();
         if (!account) {
-          setPhase({ at: "refused", gate, why: wallet.problem || copy.APP_WALLET_NEEDED });
+          setPhase({
+            at: "refused",
+            gate,
+            why: wallet.problem || copy.APP_WALLET_NEEDED,
+            needsWallet: true,
+          });
           return;
         }
       }
@@ -244,15 +253,28 @@ export default function AppConsole({
         return;
       }
 
-      const report = await getReportByDigest(digest, siteUrl.trim());
-      if (!report) {
+      /*
+       * The read-back, with the two kinds of nothing kept apart.
+       *
+       * The transaction has settled and succeeded by this point. If the node
+       * then does not answer, that is this browser's problem and not the
+       * submission's, and saying "no report can be read back, check the
+       * transaction before submitting again" invites somebody to pay a second
+       * time for a report they already have.
+       */
+      const found = await lookUpReport(digest, siteUrl.trim());
+      if (found.state !== "found") {
         setPhase({
           at: "refused",
           gate,
-          why: "The assay settled but no report can be read back yet. Check the transaction before submitting again.",
+          why:
+            found.state === "unreachable"
+              ? "The assay settled and the report was written. This browser could not read it back just now, which is a rate limit on the node rather than anything wrong with the submission. Reload in a moment, and do not submit again."
+              : "The assay settled but the contract holds no report for these bytes yet. Check the transaction before submitting again.",
         });
         return;
       }
+      const report = found.report;
       setPhase({
         at: "scored",
         gate,
@@ -551,7 +573,7 @@ export default function AppConsole({
               that gets a button: everything else here is the gate saying no,
               and the fix for that is a different contract, not another press.
             */}
-            {!wallet.address && wallet.available ? (
+            {phase.needsWallet && !wallet.address && wallet.available ? (
               <button
                 type="button"
                 className="ws-run"

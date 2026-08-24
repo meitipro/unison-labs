@@ -326,7 +326,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       walletName,
       address,
       chainId,
-      onRightChain: chainId === null ? true : chainId === CHAIN_ID_HEX.toLowerCase(),
+      /*
+       * An unknown chain is not the right chain.
+       *
+       * This read `chainId === null ? true : ...`, so a wallet whose network
+       * could not be determined reported as correctly configured, and every one
+       * of the five consumers took the reassuring branch: AppConsole skipped the
+       * switch and asked for a signature anyway, ConnectPanel redirected into
+       * the workspace, and the two wallet surfaces hid their warning. The null
+       * arrives easily, since `chainChanged` sets it for any payload that is not
+       * a string.
+       *
+       * Fixing it here rather than at each caller is the point. A guard that
+       * fails open in one place fails open everywhere that trusts it, and the
+       * honest answer to "are you on the right chain" when the chain is unknown
+       * is no.
+       */
+      onRightChain: chainId === CHAIN_ID_HEX.toLowerCase(),
       connecting,
       balance,
       problem,

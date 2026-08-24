@@ -135,15 +135,18 @@ function fromBase64(value: string): string {
  * The first is stripping the control bytes and stray high codepoints a receipt
  * carries around its message, keeping printable ASCII.
  *
- * The second is the connector. The DEPLOYED contract builds its refusal with an
+ * The second is the connector. The contract used to build its refusal with an
  * em dash -- `refused before scoring [em dash] missing header, nondet` -- and
- * that string is frozen: it is inside the bytes at
- * 0x1B79011734cc652f68Fa3eAe312aC04C7cC29Ae4, editing the source would put
- * `npm run match` out of agreement with the live contract, and a redeploy for a
- * dash would strand every report already filed under that address. So the
- * chain says what it says and this converts it on the way to the screen, which
- * is what `lib/voice.ts` exists for anyway. Worth folding into the contract at
- * the next deploy that happens for a real reason.
+ * because those bytes were already deployed, editing the source would have put
+ * `npm run match` out of agreement with the live contract. It was folded into
+ * the contract at the next deploy that happened anyway, and the exemption that
+ * had been carrying it in `scripts/check.mjs` is gone with it.
+ *
+ * This stays. A report filed under an older deployment still carries the old
+ * sentence, the chain says what it said at the time, and nothing reaches back
+ * to edit it. Converting on the way to the screen is what `lib/voice.ts` exists
+ * for anyway, and a refusal is not the place to start rendering a codepoint the
+ * rest of the product does not use.
  *
  * The nine codepoints are written as escapes, not literally, so this file does
  * not trip `scripts/check.mjs`.

@@ -4,6 +4,8 @@
  * Deliberately mirrors lib/chain.ts's network switch, so a deploy cannot land
  * on a network the site does not read.
  */
+import { readFileSync } from "node:fs";
+
 import { createAccount, createClient } from "genlayer-js";
 import { studionet, testnetBradbury } from "genlayer-js/chains";
 
@@ -65,6 +67,59 @@ export function requireKey(name) {
     );
   }
   if (!/^0x[0-9a-fA-F]{64}$/.test(key)) die(`${name} is not a 32 byte hex private key.`);
+
+  /*
+   * THE CORRUPTION THIS ACTUALLY CAUGHT, and the reason the check exists.
+   *
+   * A key is `0x` plus 64 hex characters. An address is `0x` plus 40 of them,
+   * and a private key line therefore starts with something that matches an
+   * address pattern exactly. So a bulk sweep over a .env file -- rewriting a
+   * stale contract address to the live one, the sort of thing that looks
+   * completely safe -- rewrites the first 42 characters of the key instead,
+   * silently, and leaves a key that is still 32 valid bytes.
+   *
+   * Nothing downstream notices. Any 32 bytes is a usable secp256k1 key, Studio
+   * funds whatever address it derives to, and the deploy succeeds from an
+   * account nobody meant to use. The only visible trace is this: the key now
+   * begins with an address that appears elsewhere in the repo.
+   *
+   * The real key is unrecoverable at that point, so this refuses to sign
+   * rather than warn.
+   */
+  const prefix = key.slice(0, 42).toLowerCase();
+  const seen = new Set();
+  for (const file of ["README.md", ".env.example", ".env.local"]) {
+    let text = "";
+    try {
+      text = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    } catch {
+      continue;
+    }
+    for (const line of text.split("\n")) {
+      // Skip the key's own line, or the corrupted head would be collected as
+      // an address and then matched against itself, which is how the first
+      // version of this check passed on exactly the file it was written for.
+      if (/KEY/i.test(line) || /0x[0-9a-fA-F]{64}/.test(line)) continue;
+      for (const found of line.match(/0x[0-9a-fA-F]{40}\b/g) || []) {
+        seen.add(found.toLowerCase());
+      }
+    }
+  }
+  if (seen.has(prefix)) {
+    die(
+      [
+        `${name} looks corrupted, and it will not be used.`,
+        "",
+        "  Its first 40 hex characters are a contract address that also appears",
+        "  in this repo, which is what a bulk find-and-replace over a .env file",
+        "  leaves behind when it treats the head of a key as an address.",
+        "",
+        "  Restore the key from wherever you kept it. The overwritten one cannot",
+        "  be recovered from the file, and the address it now derives to is not",
+        "  the account you meant to deploy from.",
+      ].join("\n"),
+    );
+  }
   return key;
 }
 

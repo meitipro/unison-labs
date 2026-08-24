@@ -98,18 +98,25 @@ criteria that needed it most.
 
 ### 1. Facts are computed in code, not judged by a model
 
-`contract_evidence()` counts the discriminators the anchors actually turn on -
-how many equivalence principles appear, whether `strict_eq` is applied with a
-model call and no validator pair, whether angle brackets are replaced before a
-prompt, how many `UserError`s are raised, whether errors carry a comparable
-prefix - and hands them to the model as a `<facts>` block it may not contradict.
+`contract_evidence()` hands the model a `<facts>` block it may not contradict.
+It carries what the one judged contract criterion actually needs: calls to a
+model, calls to the web, whether the source renders a page rather than calling an
+api, non-deterministic blocks in total, public write methods, public view
+methods, whether it reads another contract's state, and length in characters.
+
+That list is deliberately narrower than it once was. It used to carry the
+discriminators for every criterion - equivalence principles, angle-bracket
+replacements, raise counts, error prefixes - and those all moved into
+`facts_mark`, which reads them off the syntax tree and scores them without
+asking anyone. What is left here is what `necessity` needs, which is a question
+about intent that no count answers.
 
 Every fact is a count or a containment over bytes the network has **already
 agreed on**, so every validator reads a character-identical fact sheet. What is
 left for the model is the part it is good at: mapping fixed facts onto a
 published anchor.
 
-No fact is worth anything alone. `strict_eq` appears in careful contracts and
+No fact is worth anything alone. A model call appears in careful contracts and
 careless ones alike. The rubric is what reads them.
 
 `contracts/test_helpers.py` asserts the sheet **separates the fixtures** - a
@@ -128,22 +135,32 @@ handed samples the model, not the contract.
 
 | decided by | criteria |
 |---|---|
-| `facts` | `agreement`, `untrusted`, `boundary`, `failure` |
-| `judgment` | `necessity`, and all five site criteria |
+| `facts` | `agreement`, `untrusted`, `boundary`, `failure`, `finality`, `mechanism`, `provenance`, `recourse` |
+| `judgment` | `necessity`, `overreach` |
 
-The four counted contract criteria come from `facts_mark`, a pure function of the
-agreed bytes. Every validator derives the identical score **and the identical
-reason**, without spending an inference, so they can never be the thing that
-splits a round. The reason still names the construct it scored on - that is what
-the rubric asks of a reason, and a count cannot drift into advice.
+The four counted **contract** criteria come from `facts_mark` over the parsed
+syntax tree, a pure function of the agreed bytes. Every validator derives the
+identical score **and the identical reason**, without spending an inference, so
+they can never be the thing that splits a round. The reason still names the
+construct it scored on - that is what the rubric asks of a reason, and a count
+cannot drift into advice.
+
+The four counted **site** criteria are different in a way worth stating plainly,
+because it is the thing that took longest to see. They are read from each node's
+own render of the page, and the page is deliberately never put under an
+equivalence principle, so two honest nodes hold two slightly different texts. The
+marks are a pure function of whatever text a node held, and the texts are not the
+same. That is why the site round votes on the judged mark alone: comparing the
+counted ones would be asking two nodes to agree about something the contract
+never asked them to agree on, and it spent the whole tolerance doing it.
 
 What stays with the jury is what a count cannot reach:
 
 - **`necessity`** - does this genuinely need many nodes agreeing, or would one
   deterministic call do? A question about intent, not text.
-- **all five site criteria** - reading a live page and deciding whether a claim
-  outruns the contract behind it is irreducibly semantic. This is the part of the
-  product GenLayer is *required* for, and it is fully judged.
+- **`overreach`** - holding a claim on the page against the methods the contract
+  actually exposes is irreducibly semantic, and it is the one question here that
+  no count reaches. This is the part of the product GenLayer is *required* for.
 
 ### 3. The tolerance is published
 

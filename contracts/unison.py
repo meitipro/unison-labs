@@ -1335,7 +1335,12 @@ def assemble(kind: str, body: str, judged: dict) -> dict:
             score, reason = facts_mark(cid, body)
             scores.append(int(score))
             reasons.append(clean_reason(reason))
-    return {"ids": ids, "scores": scores, "reasons": reasons}
+    # `chars` is how much of the subject this marker actually held. It is not
+    # part of the mark and never reaches a report; the site round reads it to
+    # tell "the leader marked the whole page" from "the leader marked the nav
+    # bar", which is the one thing worth checking about a page two nodes were
+    # never asked to agree on.
+    return {"ids": ids, "scores": scores, "reasons": reasons, "chars": len(body)}
 
 
 def pick_mark(ballot: dict, cid: str) -> tuple[int, str]:
@@ -1536,6 +1541,31 @@ def mark_site(site_url: str) -> dict:
     the same marketing page a second apart get different html, and demanding
     they agree on it would refuse every honest submission. The agreement is on
     the marks.
+
+    AND ONLY ON THE JUDGED ONE, which took three rounds of the wrong fix to see.
+
+    A site's counted marks are read off each node's own render, so they are
+    deterministic in the sense that the same page always gives the same answer,
+    and not deterministic at all in the sense that matters here: two honest
+    nodes do not hold the same page. A slower rpc, a slower font, anything that
+    leaves one render a second behind at the 1200ms mark, and `finality` is 2 on
+    one node and 0 on the other, from a difference neither of them judged.
+
+    Comparing the whole vector then spent the published tolerance -- one point,
+    one criterion -- on that noise, and there was nothing left for the criterion
+    the tolerance exists for. Three live assays came back 3 agree to 2 disagree
+    while `overreach` moved 1, 0, 0 on one unchanged page, and moving criteria
+    from the jury into the count made it worse each time rather than better,
+    because every criterion moved was another render-dependent number entering
+    the comparison.
+
+    So the vote is on the judged mark alone. The counted marks still go on the
+    report, still come from the anchors, and are no longer a way for two honest
+    nodes to disagree about a page neither of them was asked to agree on.
+
+    `mark_contract` deliberately keeps comparing everything. Its counted half is
+    read from bytes the network agreed on under `strict_eq`, so two nodes there
+    really do hold the same input, and a difference really is a disagreement.
     """
 
     def one() -> dict:
@@ -1558,12 +1588,34 @@ def mark_site(site_url: str) -> dict:
         if not ballot_is_sound("site", theirs, full=True):
             return False
         page = render_site(site_url)
+
+        # THE ONE THING STILL CHECKED ABOUT THE LEADER'S PAGE, and it is a
+        # completeness check rather than an agreement.
+        #
+        # Not comparing the counted marks means a leader whose render caught
+        # only the nav shell can write four zeroes nobody questions. Demanding
+        # the two renders match would refuse every honest submission, which is
+        # the whole reason the page is not agreed in the first place. So the
+        # validator only denies when its own render found materially more page
+        # than the leader's did: same page, wildly different amount of it, and
+        # the leader is the one marking a fragment.
+        leader_chars = int(theirs.get("chars", 0) or 0)
+        if leader_chars and len(page) > leader_chars * 2:
+            return False
+
         reply = gl.nondet.exec_prompt(
             build_prompt("site", site_url, page), response_format="json"
         )
         mine = assemble("site", page, normalise_ballot("site", reply, need_reasons=False))
+
+        # Only the judged marks are voted on. See the docstring: the counted
+        # ones are read off a page the two nodes were never asked to agree on.
+        ids = _ids_of("site")
+        judged = _judged_ids("site")
+        at = [ids.index(c) for c in judged]
         return agreement_holds(
-            [int(s) for s in mine["scores"]], [int(s) for s in theirs["scores"]]
+            [int(mine["scores"][i]) for i in at],
+            [int(theirs["scores"][i]) for i in at],
         )
 
     return gl.vm.run_nondet(one, check, compare_user_errors=_compare_user_errors)
@@ -1884,7 +1936,7 @@ class Unison(gl.Contract):
             # and the round settles on the refusal instead of rotating. No
             # validator spends an inference on it.
             raise gl.vm.UserError(
-                f"{ERROR_EXPECTED} refused before scoring — missing "
+                f"{ERROR_EXPECTED} refused before scoring - missing "
                 + ", ".join(checked["missing"])
             )
 
@@ -1981,7 +2033,7 @@ class Unison(gl.Contract):
         checked = gate_of(source)
         if not checked["eligible"]:
             raise gl.vm.UserError(
-                f"{ERROR_EXPECTED} refused before scoring — missing "
+                f"{ERROR_EXPECTED} refused before scoring - missing "
                 + ", ".join(checked["missing"])
             )
 

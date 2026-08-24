@@ -76,7 +76,7 @@ on every counted criterion.
 | --- | --- | --- |
 | 1 | You give a raw file URL | Nothing yet. The browser fetches it, runs the gate and hashes it, all free |
 | 2 | The gate runs | Six presence checks, four required. A failure stops here and costs nobody an inference |
-| 3 | The digest is looked up | If those exact bytes already carry a report you are sent to it rather than charged for a second one |
+| 3 | The digest and the site are looked up together | If those exact bytes behind that exact site already carry a report you are sent to it rather than charged for a second one |
 | 4 | You sign one transaction | The only point at which a wallet is involved |
 | 5 | Validators fetch the source | Every one of them fetches it themselves and agrees on the bytes under `strict_eq` |
 | 6 | They mark it | Counted criteria in deterministic code, judged criteria by inference, against anchors published in advance |
@@ -172,11 +172,25 @@ dishonesty in the other direction.
 methods the contract actually exposes, which is the one question here that no
 count reaches, and it is why this runs on GenLayer at all.
 
-**Every ballot now carries exactly one judged mark**, so two markers can differ
-on at most one criterion by construction, and the published rule covers it. Of
-the nine score pairs a judged criterion can produce, seven agree; only a marker
-answering 0 against one answering 2 still splits, which is what a split should
-mean.
+**Every ballot now carries exactly one judged mark**, and the site round votes on
+that mark alone.
+
+Voting on the whole vector was the mistake underneath all three rounds of this.
+A site's counted marks are read from each node's own render of the page, and the
+page is deliberately never agreed, so two honest nodes hold two slightly
+different texts and derive two slightly different counts. Comparing them spent
+the tolerance on render noise, and every criterion moved from the jury into the
+count made it worse rather than better, because each one added another
+render-dependent number to the comparison. `mark_contract` still compares
+everything, and should: its counted half comes from bytes the network agreed on
+under `strict_eq`, so a difference there is a real disagreement.
+
+What the tolerance covers, stated exactly: two markers a point apart on the
+judged criterion agree, unless that point crosses a band edge at 4, 7 or 9, in
+which case they do not, because the band is the word printed beside the numeral
+and two markers who disagree about the word have not agreed. Two points apart
+never agrees. Over every counted vector, that is seven of nine pairs where the
+edge is clear and five of nine where it is not.
 
 ---
 

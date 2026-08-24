@@ -25,6 +25,7 @@ somebody has paid for a signature.
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 
@@ -909,12 +910,6 @@ if "--json" in sys.argv:
     raise SystemExit(0)
 
 print()
-if FAILURES:
-    print(f"  {len(FAILURES)} of {CHECKS} checks failed\n")
-    for failure in FAILURES:
-        print(f"   x {failure}\n")
-    raise SystemExit(1)
-
 # ---------------------------------------------------------------------------
 # Scoring validity: a mark comes from code, not from characters.
 #
@@ -994,9 +989,10 @@ check(
 # written out by hand, which is the part that would have caught it.
 
 _judged_site = M["_judged_ids"]("site")
+_site_page = "accepted then finalized, 0x1234 on studio, source on github"
 _ballot = M["assemble"](
     "site",
-    "accepted then finalized, 0x1234 on studio, source on github",
+    _site_page,
     {
         "scores": [1] * len(_judged_site),
         "reasons": ["because the page says so"] * len(_judged_site),
@@ -1004,7 +1000,12 @@ _ballot = M["assemble"](
 )
 
 check("a ballot carries no marks key at all", "marks" in _ballot, False)
-check("  it carries ids, scores and reasons", sorted(_ballot.keys()), ["ids", "reasons", "scores"])
+check(
+    "  it carries ids, scores, reasons, and how much page was read",
+    sorted(_ballot.keys()),
+    ["chars", "ids", "reasons", "scores"],
+)
+check("  chars is the length of the body it marked", _ballot["chars"], len(_site_page))
 check("a judged criterion is found in it", M["pick_mark"](_ballot, "overreach")[0], 1)
 check_true("  and carries its reason", M["pick_mark"](_ballot, "overreach")[1] != "")
 check("a counted criterion is found in it too", M["pick_mark"](_ballot, "provenance")[0], 2)
@@ -1066,7 +1067,25 @@ def _reason_reads(text):
 
 # The guard has to be able to fail, or it is decoration rather than a check.
 check("the guard catches a singular count on a plural noun", _reason_reads("1 raises, classified")[0], False)
-check("  and catches 2 validator pair run", _reason_reads("2 validator pair run")[0], False)
+# WHAT THIS GUARD ACTUALLY REACHES, since claiming more than that is how it
+# came to be trusted for something it never did.
+#
+# It reads a number against the noun beside it. "1 raises" is a singular count
+# on a plural noun and it catches that. It does NOT catch "2 validator pair
+# run", because nothing about the word "validator" says a plural was wanted,
+# and that is the exact string a live report carried. `count_of` is what fixed
+# that one, by picking the noun from the number instead of hoping, and it is
+# asserted directly rather than through this.
+check(
+    "  a plural count on a singular noun is caught where the plural is nearby",
+    _reason_reads("2 raise, and 8 raises elsewhere")[0],
+    False,
+)
+check(
+    "  but a bare plural count is not, which is why count_of exists",
+    _reason_reads("2 raise")[0],
+    True,
+)
 check("  while a correct plural passes", _reason_reads("43 raises, classified")[0], True)
 check("  and a correct singular passes", _reason_reads("1 raise, and a timeout")[0], True)
 
@@ -1200,7 +1219,7 @@ check("recourse is published as counted", M["DECIDED_BY"]["recourse"], "facts")
 check(
     "one site criterion is left with the jury",
     M["_judged_ids"]("site"),
-    ["mechanism", "overreach"],
+    ["overreach"],
 )
 
 # ---------------------------------------------------------------------------
@@ -1284,40 +1303,138 @@ check("mechanism is published as counted", M["DECIDED_BY"]["mechanism"], "facts"
 check("the contract ballot has one", M["_judged_ids"]("contract"), ["necessity"])
 check("the site ballot has one", M["_judged_ids"]("site"), ["overreach"])
 
-# The counted marks are derived identically on every node from the same input,
-# so the ONLY entry two markings can differ on is the judged one. Exhaustively:
-# every pair of scores a single judged criterion can take, against the rule.
+# One judged mark per ballot narrows what can differ. The BAND decides whether
+# that difference settles, and it does not always.
+#
+# The first version of this block asserted "seven of nine pairs agree" from a
+# single hand-picked counted vector, and it was wrong in the way a sample is
+# always wrong: seven holds for three of the nine counted totals and five holds
+# for the other six, because `agreement_holds` also requires both markers to
+# land in the same band. A judged mark moving one point across 4, 7 or 9 moves
+# the word printed beside the numeral, and the rule refuses that on purpose.
+#
+# So this walks every counted total instead of picking one, and asserts the
+# shape that is actually true.
+
 _ids_site = M["_ids_of"]("site")
 _judged_at = _ids_site.index("overreach")
-_counted = [0, 2, 0, 0]  # whatever the counts produce, both sides get the same
 
 
-def _ballot(judged_score):
-    out = list(_counted)
+def _site_ballot(counted_marks, judged_score):
+    out = list(counted_marks)
     out.insert(_judged_at, judged_score)
     return out
 
 
-_settles = 0
-_splits = []
-for _a in (0, 1, 2):
-    for _b in (0, 1, 2):
-        if M["agreement_holds"](_ballot(_a), _ballot(_b)):
-            _settles += 1
-        else:
-            _splits.append((_a, _b))
+def _agree_count(counted_marks):
+    """How many of the nine judged pairs settle, for one counted vector."""
+    n = 0
+    for a in (0, 1, 2):
+        for b in (0, 1, 2):
+            if M["agreement_holds"](_site_ballot(counted_marks, a), _site_ballot(counted_marks, b)):
+                n += 1
+    return n
 
-check("a point apart on the one judged mark still agrees", M["agreement_holds"](_ballot(1), _ballot(2)), True)
-check("  and so does the other direction", M["agreement_holds"](_ballot(2), _ballot(1)), True)
-check("two points apart is still a split, as published", M["agreement_holds"](_ballot(0), _ballot(2)), False)
+
+# Every counted vector the four counted site marks can produce.
+_all = []
+for _w in (0, 1, 2):
+    for _x in (0, 1, 2):
+        for _y in (0, 1, 2):
+            for _z in (0, 1, 2):
+                _all.append([_w, _x, _y, _z])
+
+_rates = sorted({_agree_count(_c) for _c in _all})
+check("a judged pair settles either five ways or seven, never fewer", _rates, [5, 7])
+
+# Two points apart never settles, whatever the counted marks say. That is the
+# rule doing its job: a split should mean the markers actually disagreed.
 check(
-    "so only the extremes can split a site ballot",
-    sorted(_splits),
-    [(0, 2), (2, 0)],
+    "two points apart always splits",
+    all(
+        not M["agreement_holds"](_site_ballot(_c, 0), _site_ballot(_c, 2))
+        for _c in _all
+    ),
+    True,
 )
-# The spread actually observed across three live assays was one point, never
-# two, on every judged criterion. That is the case this now absorbs.
-check("seven of the nine possible pairs settle", _settles, 7)
 
-print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
-print()
+# A point apart settles unless it crosses a band edge, and that is the whole of
+# the residual risk on a site ballot.
+_one_point_splits = [
+    _c
+    for _c in _all
+    if not M["agreement_holds"](_site_ballot(_c, 1), _site_ballot(_c, 2))
+    or not M["agreement_holds"](_site_ballot(_c, 0), _site_ballot(_c, 1))
+]
+check_true("a point apart can still split", len(_one_point_splits) > 0)
+check_true(
+    "and every time it does, the two totals sit in different bands",
+    all(
+        M["band_of"](sum(_site_ballot(_c, 1)))
+        != M["band_of"](sum(_site_ballot(_c, 2)))
+        or M["band_of"](sum(_site_ballot(_c, 0)))
+        != M["band_of"](sum(_site_ballot(_c, 1)))
+        for _c in _one_point_splits
+    ),
+)
+check_true(
+    "a point apart inside one band always settles",
+    all(
+        M["agreement_holds"](_site_ballot(_c, 1), _site_ballot(_c, 2))
+        for _c in _all
+        if M["band_of"](sum(_site_ballot(_c, 1))) == M["band_of"](sum(_site_ballot(_c, 2)))
+    ),
+)
+
+# The contract ballot is the same shape, so it carries the same residual, and
+# it is asserted rather than assumed.
+_ids_contract = M["_ids_of"]("contract")
+_nec = _ids_contract.index("necessity")
+
+
+def _contract_ballot(counted_marks, judged_score):
+    out = list(counted_marks)
+    out.insert(_nec, judged_score)
+    return out
+
+
+# 3 + 1 = 4 crosses into workable, so this pair has to split.
+check(
+    "a judged point that crosses a band edge splits the contract ballot too",
+    M["agreement_holds"](_contract_ballot([2, 1, 0, 0], 0), _contract_ballot([2, 1, 0, 0], 1)),
+    False,
+)
+# 1 + 1 = 2 and 1 + 2 = 3 are both unfit, so this pair has to settle.
+check(
+    "and a judged point inside one band settles it",
+    M["agreement_holds"](_contract_ballot([1, 0, 0, 0], 1), _contract_ballot([1, 0, 0, 0], 2)),
+    True,
+)
+
+# The report runs on the way out, so that where it sits stops mattering.
+#
+# It used to be an `if FAILURES:` two thirds of the way up the file, and the
+# four hundred lines of checks below it were collected and never printed: runs
+# ended on "N checks passed" with a zero exit code while six checks were
+# failing, which is worse than having no suite at all, because a green suite is
+# quoted as evidence. Moving it to the bottom fixed those six and left the same
+# trap for the next block anybody appends.
+#
+# `atexit` closes it properly. Wherever a check is written, its result is in
+# FAILURES before the interpreter shuts down, and this is the last thing to
+# run. There is nothing left to remember.
+import atexit  # noqa: E402
+
+
+@atexit.register
+def _report() -> None:
+    if FAILURES:
+        print(f"  {len(FAILURES)} of {CHECKS} checks failed\n")
+        for failure in FAILURES:
+            print(f"   x {failure}\n")
+        # os._exit, because raising here would only print a traceback: an
+        # exception out of an atexit handler does not set the exit status.
+        sys.stdout.flush()
+        os._exit(1)
+    print(f"  {CHECKS} checks passed  (contracts/unison.py, pure half)")
+    print()

@@ -133,7 +133,19 @@ async function main() {
 
   const rubric = JSON.parse(await read("rubric"));
   ok("the rubric loads", typeof rubric === "object");
-  ok("it is version v1", rubric.version === "v1", `got ${rubric.version}`);
+  /* Read out of the contract source rather than repeated here. This said "v1"
+     against a chain publishing v3, and a check that has to be edited every time
+     the thing it checks changes is a check nobody believes. */
+  const wantVersion = (
+    readFileSync(join(ROOT, "contracts", "unison.py"), "utf8").match(
+      /^RUBRIC_VERSION\s*=\s*"([^"]+)"/m,
+    ) || []
+  )[1];
+  ok(
+    `it is the rubric in this repo (${wantVersion || "unreadable"})`,
+    Boolean(wantVersion) && rubric.version === wantVersion,
+    `chain says ${rubric.version}`,
+  );
   ok("ten points is the ceiling", rubric.max_total === 10);
   ok("every criterion is worth 0, 1 or 2", rubric.max_score === 2);
   ok(
@@ -253,7 +265,10 @@ async function main() {
     const body = await fetch(sourceUrl).then((r) => (r.ok ? r.text() : ""));
     if (body) {
       sourceDigest = await digest(normalise(body));
-      const found = await read("report_by_digest", [sourceDigest]);
+      /* The site is half the key. Passing the digest alone asks a question
+         the contract stopped answering and gets a null that reads as "never
+         reviewed" for a source that was. */
+      const found = await read("report_by_digest", [sourceDigest, siteUrl]);
       if (found) {
         const report = JSON.parse(found);
         reportId = report.id;
@@ -313,7 +328,9 @@ async function main() {
       const hash = await writeWithRetry(client, {
         address,
         functionName: "assay",
-        args: [sourceUrl, ""],
+        /* The SAME subject, or this proves nothing: with a different site it is
+           a new review and the contract is right to charge for it. */
+        args: [sourceUrl, siteUrl],
         value: 0n,
       });
       const receipt = await waitFinal(client, hash, "     repeat");
