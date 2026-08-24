@@ -33,3 +33,7 @@ __pycache__/
 
 # local tooling
 .claude/
+
+# Throwaway probes. These get written at the repo root while checking something
+# on chain, and one rode into a commit.
+_*.mjs
