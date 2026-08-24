@@ -1411,6 +1411,97 @@ check(
     True,
 )
 
+# ---------------------------------------------------------------------------
+# The reviewer's first point, at the last place it was still true.
+#
+# "Parse executable structure instead of awarding most marks from raw substring
+# counts." The counted marks were moved onto the syntax tree and `decoy.py`
+# proves they see through a forgery. The JURY'S evidence sheet was not moved,
+# and the prompt hands it over saying it was counted by code and may not be
+# contradicted. So on the one fixture written to fool a substring scorer, the
+# counted half scored it 1 out of 10 and the judged half was told the forgery
+# was fact: five non-deterministic blocks, two calls to a model, one call to
+# the web, in a file that makes none of them.
+
+_decoy_sheet = dict(M["contract_evidence"](_decoy))
+check("the decoy is told to make no model calls", _decoy_sheet["calls to a model (gl.nondet.exec_prompt)"], "0")
+check("  no web calls", _decoy_sheet["calls to the web (gl.nondet.web.*)"], "0")
+check("  no renders", _decoy_sheet["renders a page rather than calling an api"], "0")
+check("  and no non-deterministic blocks at all", _decoy_sheet["non-deterministic blocks in total"], "0")
+
+# Every number on the sheet has to be a number the tree agrees with, or the
+# sheet is back to being a second opinion the prompt swears by.
+_careful_sheet = dict(M["contract_evidence"](_careful))
+_careful_tree = M["analyse"](_careful)
+check(
+    "the sheet and the tree agree about model calls",
+    _careful_sheet["calls to a model (gl.nondet.exec_prompt)"],
+    str(_careful_tree["prompts"]),
+)
+check(
+    "  and about non-deterministic blocks",
+    _careful_sheet["non-deterministic blocks in total"],
+    str(_careful_tree["nondet_blocks"]),
+)
+check(
+    "  and about the public surface",
+    (_careful_sheet["public write methods"], _careful_sheet["public view methods"]),
+    (str(_careful_tree["writes"]), str(_careful_tree["views"])),
+)
+
+# A decorator written into a docstring decorates nothing.
+_fake_surface = (
+    'GATE = "@gl.public.write @gl.public.write @gl.public.view"\n'
+    "class Thing:\n"
+    "    @gl.public.write\n"
+    "    def a(self): pass\n"
+)
+_fs = M["analyse"](_fake_surface)
+check("a decorator inside a string literal decorates nothing", _fs["writes"], 1)
+check("  and adds no view either", _fs["views"], 0)
+
+# A source Python will not accept is said to be unreadable rather than handed
+# over as a contract that happens to do very little.
+_broken_sheet = dict(M["contract_evidence"]("def oops(:\n    gl.nondet.exec_prompt(x)\n"))
+check("an unparseable source is named as one", _broken_sheet.get("the source is valid Python"), "no")
+check("  and carries no invented counts", "non-deterministic blocks in total" in _broken_sheet, False)
+
+
+# ---------------------------------------------------------------------------
+# The reviewer's third point, and the hole a stranger could drive through it.
+#
+# "Meaningful owner recourse." An appeal re-marks one criterion with a fresh
+# jury and can supersede the report, and it is open to anyone, because the party
+# with the strongest reason to dispute a mark is whoever wrote the code and they
+# rarely paid for the review.
+#
+# One appeal per report, though. A contract-side counted criterion is derived
+# from the same bytes the appeal re-fetches and refuses to proceed without, so a
+# re-mark lands on the same number every time and can only ever uphold. That
+# made the open door a lock: any address could call contest(id, "boundary"),
+# spend the slot on a criterion that cannot move, and leave the author with no
+# route to the one criterion they wanted looked at.
+
+_counted_contract = [c for c in M["_ids_of"]("contract") if M["DECIDED_BY"][c] == "facts"]
+check(
+    "four contract criteria are counted from the pinned bytes",
+    sorted(_counted_contract),
+    ["agreement", "boundary", "failure", "untrusted"],
+)
+check(
+    "and one is left for an appeal to reach",
+    M["_judged_ids"]("contract"),
+    ["necessity"],
+)
+# The site's counted marks are NOT in the same position: mark_site re-derives
+# them from a live render, so a page that has since published its address really
+# can reach a different answer, and appealing one is not futile.
+check(
+    "the site's counted marks stay appealable, since a live page can change",
+    sorted(c for c in M["_ids_of"]("site") if M["DECIDED_BY"][c] == "facts"),
+    ["finality", "mechanism", "provenance", "recourse"],
+)
+
 # The report runs on the way out, so that where it sits stops mattering.
 #
 # It used to be an `if FAILURES:` two thirds of the way up the file, and the

@@ -574,6 +574,10 @@ def analyse(source: str) -> dict:
         "custom": 0,
         "prompts": 0,
         "web": 0,
+        "renders": 0,
+        "writes": 0,
+        "views": 0,
+        "reads_other": 0,
         "validator_reads_leader": 0,
         "fences": 0,
         "clips": 0,
@@ -597,6 +601,15 @@ def analyse(source: str) -> dict:
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             functions.setdefault(node.name, node)
+            # The public surface, read off the decorators Python actually
+            # applies. A `@gl.public.write` written inside a docstring or a
+            # comment decorates nothing and is counted as nothing.
+            for dec in node.decorator_list:
+                marker = _dotted(dec) or _fn_name(dec)
+                if marker == "gl.public.write":
+                    facts["writes"] += 1
+                elif marker in ("gl.public.view", "gl.public.view.min_gas"):
+                    facts["views"] += 1
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Raise):
@@ -639,8 +652,15 @@ def analyse(source: str) -> dict:
                     facts["validator_reads_leader"] += 1
         elif name == "gl.nondet.exec_prompt":
             facts["prompts"] += 1
-        elif name in ("gl.nondet.web.render", "gl.nondet.web.get"):
+        elif name in ("gl.nondet.web.render", "gl.nondet.web.get", "gl.nondet.web.post"):
+            # `web` is every call to the web, which is what its label says.
+            # `renders` is the subset that drives a browser rather than calling
+            # an api, and `necessity` turns on the difference.
             facts["web"] += 1
+            if name == "gl.nondet.web.render":
+                facts["renders"] += 1
+        elif name == "gl.get_contract_at":
+            facts["reads_other"] += 1
         elif name == "gl.storage.copy_to_memory":
             facts["copies"] += 1
         elif name.endswith(".replace") and len(node.args) >= 2:
@@ -734,26 +754,39 @@ def contract_evidence(source: str) -> list[tuple[str, str]]:
     criterion a model is asked about. `facts_mark` does its own counting for the
     four that are settled by a count, and a sheet full of facts the question does
     not turn on only dilutes the question.
+
+    EVERY NUMBER HERE IS A NODE COUNT, and it has to be, because the prompt tells
+    the jury this sheet was counted by code and may not be contradicted.
+
+    It used to count substrings, which made it the last place in the product
+    where a mention could be mistaken for a call, and it was the worst place for
+    that to be left. `public/fixtures/decoy.py` exists to prove a substring
+    scorer can be fooled: every marker in it sits in a comment, a docstring or a
+    string literal. The counted marks saw through it and scored it 1 out of 10,
+    and this sheet handed the jury "5 non-deterministic blocks, 2 calls to a
+    model, 1 call to the web" for a file that makes none, with an instruction not
+    to recount. The counted half caught the decoy and the judged half was told to
+    trust the forgery.
+
+    Reading `analyse` closes it. A marker inside a comment contributes nothing
+    here for the same structural reason it contributes nothing to a mark.
     """
-    prompts = _count(source, "gl.nondet.exec_prompt")
-    web = _count(source, "gl.nondet.web.get", "gl.nondet.web.post", "gl.nondet.web.render")
-    renders = _count(source, "gl.nondet.web.render")
-    blocks = _count(
-        source,
-        "gl.eq_principle.strict_eq",
-        "gl.eq_principle.prompt_comparative",
-        "gl.eq_principle.prompt_non_comparative",
-        "gl.vm.run_nondet(",
-        "gl.vm.run_nondet_unsafe(",
-    )
+    f = analyse(source)
+    if not f["parsed"]:
+        # Nothing to count. Saying so plainly beats handing over a sheet of
+        # zeroes that reads like a contract which simply does very little.
+        return [
+            ("the source is valid Python", "no"),
+            ("length in characters", str(len(source))),
+        ]
     return [
-        ("calls to a model (gl.nondet.exec_prompt)", str(prompts)),
-        ("calls to the web (gl.nondet.web.*)", str(web)),
-        ("renders a page rather than calling an api", str(renders)),
-        ("non-deterministic blocks in total", str(blocks)),
-        ("public write methods", str(_count(source, "@gl.public.write"))),
-        ("public view methods", str(_count(source, "@gl.public.view"))),
-        ("reads another contract's state", _yes(_count(source, "get_contract_at") > 0)),
+        ("calls to a model (gl.nondet.exec_prompt)", str(f["prompts"])),
+        ("calls to the web (gl.nondet.web.*)", str(f["web"])),
+        ("renders a page rather than calling an api", str(f["renders"])),
+        ("non-deterministic blocks in total", str(f["nondet_blocks"])),
+        ("public write methods", str(f["writes"])),
+        ("public view methods", str(f["views"])),
+        ("reads another contract's state", _yes(f["reads_other"] > 0)),
         ("length in characters", str(len(source))),
     ]
 
@@ -2086,6 +2119,33 @@ class Unison(gl.Contract):
             )
 
         sender = gl.message.sender_address.as_hex
+
+        # AN APPEAL THAT COULD NOT CHANGE ANYTHING IS REFUSED BEFORE IT SPENDS
+        # THE ONE APPEAL A REPORT GETS.
+        #
+        # A contract-side counted criterion is derived from the same bytes the
+        # report was written about, and the appeal re-fetches those bytes and
+        # refuses outright if they moved. So a re-mark arrives at the same
+        # number by construction, every time, and it can never do anything but
+        # uphold.
+        #
+        # That made it a weapon. The author of a contract who wants `necessity`
+        # looked at again could be locked out by any stranger calling
+        # `contest(id, "boundary")` first: it upholds, the slot is spent, and
+        # the one party the report is actually about is left with nothing. The
+        # route was open to everyone so the author would have one, and it was
+        # exactly the author it could be taken from.
+        #
+        # The four counted SITE criteria are not refused here, deliberately.
+        # `mark_site` re-derives those from a live render, so a page that has
+        # since published its address really can reach a different answer.
+        if key in _ids_of("contract") and DECIDED_BY.get(key) == "facts":
+            raise gl.vm.UserError(
+                f"{ERROR_EXPECTED} {key} is counted from the same bytes report"
+                f" {rid} was written about, so a re-mark cannot reach a different"
+                f" answer, and this report's appeal is still unspent"
+            )
+
         if self.contest_of.get(str(rid)) is not None:
             raise gl.vm.UserError(f"{ERROR_EXPECTED} report {rid} is already contested")
 
