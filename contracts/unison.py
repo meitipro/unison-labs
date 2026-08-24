@@ -831,6 +831,40 @@ def evidence_of(kind: str, body: str) -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 
 
+#: Anything that is not a letter or a digit ends a word.
+_WORD = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+
+def says_word(text: str, *words: str) -> bool:
+    """Whether any of these appears as a WORD, not as a run of characters.
+
+    `"losing" in page` is true of "closing soon", "disclosing our fees" and "we
+    are closing the beta", so a shop with a sale banner was scored as having an
+    appeals process. Every keyword here is read by somebody whose product is
+    being marked on it, and a mark awarded for a substring inside an unrelated
+    word is the exact thing this rubric was rejected for the first time.
+
+    No regular expression, deliberately: the boundary is checked against a
+    literal alphabet so the same page gives the same answer on every node, and
+    so nothing here depends on an escape surviving the trip into this file.
+    """
+    lowered = (text or "").lower()
+    for word in words:
+        w = word.lower()
+        if not w:
+            continue
+        at = lowered.find(w)
+        while at != -1:
+            before = lowered[at - 1] if at > 0 else " "
+            after_at = at + len(w)
+            after = lowered[after_at] if after_at < len(lowered) else " "
+            # A phrase carries its own spaces, so only the outer edges matter.
+            if before not in _WORD and after not in _WORD:
+                return True
+            at = lowered.find(w, at + 1)
+    return False
+
+
 #: The site criteria a presence check can settle, so a model is never asked.
 SITE_COUNTED = ("finality", "mechanism", "provenance", "recourse")
 
@@ -863,8 +897,29 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
     lowered = page.lower()
 
     if cid == "finality":
-        accepted = "accepted" in lowered
-        final = "finaliz" in lowered or "finalis" in lowered
+        # Every anchor here is about a transaction: called done the moment it is
+        # sent, waited for and called final, or the two states named apart. On a
+        # page with no transactions on it the criterion has nothing to describe,
+        # and reading the bare words was scoring a shop 2 out of 2 for "payment
+        # cards accepted, finalise your order at checkout".
+        chain_talk = says_word(
+            page,
+            "transaction",
+            "transactions",
+            "tx",
+            "on-chain",
+            "onchain",
+            "chain",
+            "block",
+            "submitted",
+            "signed",
+            "wallet",
+            "contract",
+        )
+        if not chain_talk:
+            return 0, "the page never names a transaction, so it never says when one is done"
+        accepted = says_word(page, "accepted", "acceptance")
+        final = says_word(page, "finalized", "finalised", "finality", "finalize", "finalise")
         if accepted and final:
             return 2, "the page names accepted and finalized separately, so the wait is visible"
         if final:
@@ -875,12 +930,14 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
 
     if cid == "provenance":
         address = "0x" in page
-        network = any(
-            n in lowered for n in ("studio", "bradbury", "asimov", "testnet", "mainnet")
-        )
-        source_link = any(
-            n in lowered for n in ("github", "source code", "view source", ".py")
-        )
+        network = says_word(page, "studio", "bradbury", "asimov", "testnet", "mainnet")
+        # The page arrives rendered in TEXT mode, where a hyperlink is only its
+        # label: a real "Source" button linking to github leaves the word and
+        # loses the href. So the label counts, and a page is not marked down for
+        # linking properly instead of printing a url.
+        source_link = says_word(
+            page, "github", "source code", "view source", "source", "repository", "repo",
+        ) or ".py" in lowered
         if address and network and source_link:
             return 2, "an address, a network and the source are all named on the page"
         if address:
@@ -895,12 +952,26 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
         # overreach 1, 0, 0 on one unchanged page. `overreach` stays with the
         # jury because it holds a claim against the methods the contract
         # exposes, which no count reaches. This one does not need it.
-        named = any(w in lowered for w in ("validator", "consensus", "quorum"))
+        named = says_word(page, "validator", "validators", "consensus", "quorum")
         if not named:
             return 0, "no validators or consensus are named, so the page stops at ai or blockchain"
-        agrees = any(
-            w in lowered
-            for w in ("agree on", "agree that", "agree about", "must agree", "independently")
+        # Anchor 2 wants the THING they have to agree on named, so the phrase has
+        # to say so. "independently" used to be enough, which handed 2 out of 2
+        # to the sentence "no validators are involved and nothing is agreed
+        # independently" while a page that spelled the mechanism out scored 1.
+        agrees = says_word(
+            page,
+            "agree on",
+            "agree that",
+            "agree about",
+            "agree upon",
+            "must agree",
+            "have to agree",
+            "the same answer",
+            "the same result",
+            "the same score",
+            "the same mark",
+            "the same bytes",
         )
         if agrees:
             return 2, "the page names the validators and what they have to agree on"
@@ -914,21 +985,25 @@ def site_facts_mark(cid: str, page: str) -> tuple[int, str]:
         # report reads "no losing path, appeal, dispute, contest, window,
         # deadline or actor is stated", which is this function, written out by
         # a model at the price of an inference and a vote it could lose.
-        raised = any(
-            w in lowered
-            for w in ("appeal", "dispute", "contest", "challenge", "object to", "losing")
+        # The inflections are listed rather than stemmed. "can be appealed" is
+        # how a page actually says it, and a word boundary that only knows
+        # "appeal" reads straight past it.
+        raised = says_word(
+            page,
+            "appeal", "appeals", "appealed", "appealing",
+            "dispute", "disputes", "disputed",
+            "contest", "contested",
+            "challenge", "challenged",
+            "object to", "losing",
         )
         if not raised:
             return 0, "no appeal or dispute is mentioned, so the losing path is not on the page"
-        when = any(
-            w in lowered
-            for w in ("window", "deadline", "within ", " days", " hours", "period")
+        when = says_word(page, "window", "deadline", "within", "days", "hours", "period")
+        who = says_word(
+            page, "anyone", "any holder", "whoever", "who may", "eligible",
+            "submitter", "owner", "author",
         )
-        who = any(
-            w in lowered
-            for w in ("anyone", "any holder", "whoever", "who may", "eligible", "submitter", "owner")
-        )
-        cost = any(w in lowered for w in ("fee", "cost", "free", "stake", "deposit", "gas"))
+        cost = says_word(page, "fee", "fees", "cost", "free", "stake", "deposit", "gas")
         if when and who and cost:
             return 2, "an appeal is described with its window, its cost and who may start one"
         missing: list[str] = []
@@ -1006,7 +1081,11 @@ def facts_mark(cid: str, source: str) -> tuple[int, str]:
 
     if cid == "untrusted":
         if prompts == 0:
-            return 1, "no prompt is executed, so no external text reaches a model to be fenced"
+            # No anchor here fits a contract with no prompt, and the free point
+            # this used to hand out was the largest single gift in the rubric:
+            # `decoy.py`, which executes nothing, collected it while its own
+            # docstring says a scorer reading the tree marks it at zero.
+            return 0, "no prompt is executed, so nothing here fences anything"
         if fences > 0:
             return 2, (
                 f"{count_of(fences, 'angle-bracket replacement runs', 'angle-bracket replacements run')}"
@@ -1017,18 +1096,28 @@ def facts_mark(cid: str, source: str) -> tuple[int, str]:
         return 0, "external text reaches an executed prompt with its structure intact"
 
     if cid == "boundary":
+        # The anchors are about SHAPE, not about volume: scattered calls, calls
+        # grouped without a copy, or one block per decision with the copy. There
+        # is no anchor that says "too many blocks", and the cutoff here used to
+        # be `blocks <= 3`, so a contract with four well-scoped rounds scored
+        # zero for having four decisions to make. This contract has four, and
+        # its own rubric marked it 0 out of 2.
+        loose = prompts + f["web"]
         if blocks == 0:
+            if loose > 0:
+                return 0, (
+                    f"{count_of(loose, 'model or web call is', 'model or web calls are')}"
+                    f" made with no block drawn around them"
+                )
             return 0, "no non-deterministic block is called at all"
-        if blocks <= 3 and copies > 0:
-            return 2, "the calls are grouped and stored state is copied to memory before a block"
-        if blocks <= 3:
-            return 1, (
-                f"{count_of(blocks, 'block is', 'blocks are')} grouped,"
-                f" but no stored state is copied to memory first"
+        if copies > 0:
+            return 2, (
+                f"{count_of(blocks, 'block is', 'blocks are')} drawn,"
+                f" with stored state copied to memory before one"
             )
-        return 0, (
-            f"{count_of(blocks, 'non-deterministic block is', 'non-deterministic blocks are')}"
-            f" called across the flow"
+        return 1, (
+            f"{count_of(blocks, 'block is', 'blocks are')} drawn,"
+            f" but no stored state is copied to memory first"
         )
 
     if cid == "failure":

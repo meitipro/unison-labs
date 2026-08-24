@@ -65,8 +65,23 @@ both saying which is which.
 source is parsed and the marks come from nodes Python would execute, so a call
 named in a comment, a docstring or a string literal contributes nothing, and
 `public/fixtures/decoy.py` is kept as the proof: it mentions `strict_eq` twice,
-`run_nondet` three times and two raises, all of them inert, and it scores zero
-on every counted criterion.
+`run_nondet` three times and two raises, all of them inert, and it scores **zero
+on every counted criterion**.
+
+The fact sheet the jury is handed is read from the same tree. It used to count
+substrings, which made it the last place a mention could be mistaken for a call,
+and the worst place for that to be left: the counted marks caught the decoy and
+scored it 1 out of 10, while the sheet told the jury, as fact, that the same file
+made five non-deterministic blocks and two calls to a model. Every number a
+marker sees now comes from a node.
+
+**A keyword is a word.** The site half reads a rendered page, and a mark handed
+out for a run of characters inside an unrelated word is the same defect wearing
+different clothes: "losing" sits inside "closing", so a shop with a sale banner
+was credited with an appeals process, and "accepted" beside "finalise your
+order" scored a checkout page 2 out of 2 for telling acceptance apart from
+finality. Boundaries are checked against a literal alphabet, with no regular
+expression on either side.
 
 ---
 
@@ -202,7 +217,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   266 checks over its pure half, on plain CPython
+contracts/test_helpers.py   308 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
@@ -285,7 +300,7 @@ npm run dev            # http://localhost:4400
 ```
 
 ```bash
-npm test               # 31 node tests + 266 pure-half contract checks
+npm test               # 31 node tests + 308 pure-half contract checks
 npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```

@@ -508,17 +508,45 @@ def site_mark(cid, page):
     return M["site_facts_mark"](cid, page)
 
 
-check("a page naming both states is told apart", site_mark("finality", "accepted then finalized")[0], 2)
-check("finalized alone is a partial mark", site_mark("finality", "finalized on chain")[0], 1)
-check("accepted alone is a partial mark", site_mark("finality", "accepted, so it is done")[0], 1)
-check("a page naming neither scores zero", site_mark("finality", "your thing is live")[0], 0)
+# Every anchor here is about a transaction, so these fixtures name one. A page
+# with no transaction on it is a separate case, asserted below: reading the bare
+# words scored a shop 2 out of 2 for "payment cards accepted, finalise your
+# order at checkout", which is anchor 2 awarded to a page about shipping.
+check(
+    "a page naming both states is told apart",
+    site_mark("finality", "your transaction is accepted, then finalized")[0],
+    2,
+)
+check(
+    "finalized alone is a partial mark",
+    site_mark("finality", "every transaction is finalized on chain")[0],
+    1,
+)
+check(
+    "accepted alone is a partial mark",
+    site_mark("finality", "your transaction is accepted, so it is done")[0],
+    1,
+)
+check(
+    "a page naming neither scores zero",
+    site_mark("finality", "your transaction is live")[0],
+    0,
+)
 check_true(
     "the British spelling counts as finality too",
-    site_mark("finality", "accepted then finalised")[0] == 2,
+    site_mark("finality", "the transaction is accepted then finalised")[0] == 2,
 )
 check_true(
     "the check is case insensitive, because a heading is not lowercase",
-    site_mark("finality", "ACCEPTED and FINALIZED")[0] == 2,
+    site_mark("finality", "Your TRANSACTION is ACCEPTED and FINALIZED")[0] == 2,
+)
+check(
+    "a page with no transaction on it has nothing to be told apart",
+    site_mark(
+        "finality",
+        "Payment cards accepted. Finalise your order at checkout and we ship in 48 hours.",
+    ),
+    (0, "the page never names a transaction, so it never says when one is done"),
 )
 
 FULL = "0xabc contract on studio testnet, source on github"
@@ -1287,9 +1315,23 @@ check(
     2,
 )
 check(
-    "independently counts as saying what they do",
-    site_mark("mechanism", "each validator marks it independently")[0],
+    # "independently" is not the thing they agree ON, and treating it as one
+    # handed 2 out of 2 to a flat denial: "no validators are involved and
+    # nothing is agreed independently" contains both signals and means the
+    # opposite. Anchor 2 asks for the thing named, so the phrase has to name it.
+    "naming what they agree on is what earns the second point",
+    site_mark("mechanism", "each validator must agree on the same answer")[0],
     2,
+)
+check(
+    "  a bare independently is not that",
+    site_mark("mechanism", "each validator marks it independently")[0],
+    1,
+)
+check(
+    "  and a denial does not score as a statement",
+    site_mark("mechanism", "No validators are involved and nothing is agreed independently.")[0],
+    1,
 )
 check(
     "consensus is named too",
@@ -1500,6 +1542,87 @@ check(
     "the site's counted marks stay appealable, since a live page can change",
     sorted(c for c in M["_ids_of"]("site") if M["DECIDED_BY"][c] == "facts"),
     ["finality", "mechanism", "provenance", "recourse"],
+)
+
+# ---------------------------------------------------------------------------
+# A keyword is a word, not a run of characters.
+#
+# "losing" is inside "closing", "disclosing" and "enclosing", so a shop with a
+# sale banner was credited with an appeals process. Every one of these keywords
+# is read by somebody whose product is being marked on it, and a mark handed out
+# for a substring inside an unrelated word is the exact failure this rubric was
+# rejected for the first time.
+
+_w = M["says_word"]
+check("a word matches itself", _w("we offer an appeal", "appeal"), True)
+check("  at the start of the text", _w("appeal within 7 days", "appeal"), True)
+check("  at the very end", _w("you may appeal", "appeal"), True)
+check("  next to punctuation", _w("(appeal)", "appeal"), True)
+check("  whatever the case", _w("APPEAL now", "appeal"), True)
+check("a word does not match inside a longer one", _w("closing soon", "losing"), False)
+check("  nor inside a prefix", _w("disclosing our fees", "losing"), False)
+check("  nor when only the tail lines up", _w("misappealed", "appeal"), False)
+check("a phrase keeps its own spaces", _w("they must agree on the bytes", "agree on"), True)
+check("an empty needle never matches", _w("anything", ""), False)
+
+# The three pages that used to be credited with a losing path.
+for _text in ("Closing soon: 20% off.", "We are closing the beta.", "Disclosing our fees."):
+    check(f'"{_text[:24]}" is not an appeals process', site_mark("recourse", _text)[0], 0)
+# And the inflections a page really uses still count.
+check("a page saying decisions can be appealed does count", site_mark("recourse", "decisions can be appealed")[0], 1)
+check("  and so does disputed", site_mark("recourse", "the result may be disputed")[0], 1)
+
+# ---------------------------------------------------------------------------
+# `boundary` reads shape, not volume.
+#
+# The anchors are scattered calls, grouped calls without a copy, or one block
+# per decision with the copy. None of them says "too many blocks", and the cut
+# used to be `blocks <= 3`, so a contract with four well-scoped rounds scored
+# zero for having four decisions to make. This contract has four, and its own
+# rubric marked it 0 out of 2.
+
+_four_blocks = (
+    "def a():\n"
+    "    return gl.nondet.exec_prompt('a')\n"
+    "def b():\n"
+    "    return gl.nondet.exec_prompt('b')\n"
+    "x1 = gl.vm.run_nondet(a, b)\n"
+    "x2 = gl.vm.run_nondet(a, b)\n"
+    "x3 = gl.vm.run_nondet(a, b)\n"
+    "x4 = gl.vm.run_nondet(a, b)\n"
+)
+check_true("four blocks is not a failing shape", mark(_four_blocks, "boundary")[0] >= 1)
+check(
+    "  and a copy to memory is what earns the second point",
+    mark(_four_blocks.replace("x1 =", "m = gl.storage.copy_to_memory(s)\nx1 ="), "boundary")[0],
+    2,
+)
+check(
+    "a model call with no block around it is the scattered shape",
+    mark("v = gl.nondet.exec_prompt('go')\n", "boundary")[0],
+    0,
+)
+check_true(
+    "  and says so",
+    "no block drawn around them" in mark("v = gl.nondet.exec_prompt('go')\n", "boundary")[1],
+)
+
+# ---------------------------------------------------------------------------
+# The decoy scores nothing at all, which is the whole point of keeping it.
+
+_decoy_marks = {c: mark(_decoy, c) for c in ("agreement", "untrusted", "boundary", "failure")}
+check(
+    "every counted contract mark on the decoy is zero",
+    sorted({s for s, _ in _decoy_marks.values()}),
+    [0],
+)
+# `untrusted` was the leak: a contract that executes no prompt used to collect a
+# free point for it, matching none of the three anchors, and the decoy executes
+# nothing at all.
+check(
+    "  including untrusted, which used to hand out a point for having no prompt",
+    _decoy_marks["untrusted"][0],
+    0,
 )
 
 # The report runs on the way out, so that where it sits stops mattering.
