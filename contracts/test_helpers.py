@@ -1625,6 +1625,80 @@ check(
     0,
 )
 
+# ---------------------------------------------------------------------------
+# A node in the tree is not a node Python would execute.
+#
+# Parsing closes the gap for a marker written in a comment, a docstring or a
+# string literal. It leaves it wide open for one written after a `return`, and
+# the file below was built against the scorer as it stood: it parses, it passes
+# five of six gate checks, and it collected 3 of the 8 counted points while its
+# jury sheet reported a model call and two non-deterministic blocks. It does
+# nothing whatsoever.
+
+_dead = (
+    '# { "Depends": "py-genlayer:x" }\n'
+    '"""\n'
+    "gl.eq_principle.strict_eq gl.vm.run_nondet( gl.nondet.exec_prompt\n"
+    "gl.storage.copy_to_memory raise gl.vm.UserError status\n"
+    '"""\n'
+    'ERROR_EXPECTED = "[EXPECTED]"\n'
+    'NOTES = "gl.vm.run_nondet( gl.eq_principle.strict_eq gl.nondet.exec_prompt"\n'
+    "\n"
+    "class Thing(gl.Contract):\n"
+    "    body: str\n"
+    "\n"
+    "    @gl.public.write\n"
+    "    def submit(self, x: str) -> None:\n"
+    "        self.body = x\n"
+    "        return\n"
+    '        gl.eq_principle.strict_eq(lambda: gl.nondet.exec_prompt("go"))\n'
+    "        gl.vm.run_nondet(a, b)\n"
+    '        raise gl.vm.UserError(ERROR_EXPECTED + " nope")\n'
+    "\n"
+    "    @gl.public.view\n"
+    "    def read(self) -> str:\n"
+    "        if False:\n"
+    "            gl.vm.run_nondet(a, b)\n"
+    '            raise gl.vm.UserError("x")\n'
+    "        return self.body\n"
+)
+_dead = M["normalise"](_dead)
+
+check("dead code parses, so the file looks like a contract", M["analyse"](_dead)["parsed"], True)
+check(
+    "every counted mark on it is zero",
+    [mark(_dead, c)[0] for c in ("agreement", "untrusted", "boundary", "failure")],
+    [0, 0, 0, 0],
+)
+_dead_sheet = dict(M["contract_evidence"](_dead))
+check("the jury is told it makes no model calls", _dead_sheet["calls to a model (gl.nondet.exec_prompt)"], "0")
+check("  and no non-deterministic blocks", _dead_sheet["non-deterministic blocks in total"], "0")
+# The public surface is real: those decorators do apply, and the methods exist.
+check("  while its real public surface still counts", _dead_sheet["public write methods"], "1")
+
+# The two levers, one at a time.
+_after_return = "def f():\n    return 1\n    gl.vm.run_nondet(a, b)\n"
+check("a call after a return is not executed", M["analyse"](_after_return)["nondet_blocks"], 0)
+_if_false = "def f():\n    if False:\n        gl.vm.run_nondet(a, b)\n"
+check("a call under if False is not executed", M["analyse"](_if_false)["nondet_blocks"], 0)
+_if_true = "def f():\n    if True:\n        gl.vm.run_nondet(a, b)\n"
+check("  but one under if True is", M["analyse"](_if_true)["nondet_blocks"], 1)
+_else_branch = "def f():\n    if False:\n        pass\n    else:\n        gl.vm.run_nondet(a, b)\n"
+check("  and the else of a false branch still runs", M["analyse"](_else_branch)["nondet_blocks"], 1)
+_after_raise = "def f():\n    raise ValueError()\n    gl.nondet.exec_prompt('x')\n"
+check("a call after a raise is not executed", M["analyse"](_after_raise)["prompts"], 0)
+_in_except = (
+    "def f():\n    try:\n        return 1\n    except Exception:\n        gl.nondet.exec_prompt('x')\n"
+)
+check("  but a handler is reachable, so its calls count", M["analyse"](_in_except)["prompts"], 1)
+_in_finally = "def f():\n    try:\n        return 1\n    finally:\n        gl.nondet.exec_prompt('x')\n"
+check("  and so is a finally", M["analyse"](_in_finally)["prompts"], 1)
+
+# Pruning must not touch a contract that actually works.
+_careful_before = [mark(_careful, c)[0] for c in ("agreement", "untrusted", "boundary", "failure")]
+check("a careful contract still scores every counted point", _careful_before, [2, 2, 2, 2])
+check("and the decoy still scores none", [mark(_decoy, c)[0] for c in ("agreement", "untrusted", "boundary", "failure")], [0, 0, 0, 0])
+
 # The report runs on the way out, so that where it sits stops mattering.
 #
 # It used to be an `if FAILURES:` two thirds of the way up the file, and the

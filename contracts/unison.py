@@ -561,6 +561,112 @@ def _reads_its_argument(fn: typing.Any) -> bool:
     return False
 
 
+_STOPS = (ast.Return, ast.Raise, ast.Break, ast.Continue)
+
+
+def _reachable(tree: typing.Any) -> typing.Any:
+    """The same tree with the statements Python could never run taken out.
+
+    A node in the tree is not the same thing as a node Python would execute,
+    and every mark in this rubric turns on the second one. Parsing alone closes
+    the gap for a marker written in a comment, a docstring or a string literal,
+    and leaves it wide open for one written after a `return`:
+
+        @gl.public.write
+        def submit(self, x: str) -> None:
+            self.body = x
+            return
+            gl.eq_principle.strict_eq(lambda: gl.nondet.exec_prompt("go"))
+            gl.vm.run_nondet(a, b)
+            raise gl.vm.UserError(ERROR_EXPECTED + " nope")
+
+    That file parses, passes the gate, and used to collect 3 of the 8 counted
+    points while its jury sheet reported a model call and two non-deterministic
+    blocks. It does nothing at all. `if False:` is the same trick with a
+    different lever, and so is `while False:`.
+
+    Two rules, both of them things the language guarantees rather than things a
+    scorer guesses:
+
+      a statement after a return, raise, break or continue in the same block
+      cannot run, so the rest of that block goes
+
+      a branch under a constant that is falsey cannot run, so its body goes and
+      its `else` stays
+
+    Conservative on purpose. Nothing here tries to decide whether a function is
+    ever called, or whether a condition is true in practice; that is a question
+    about the program, and this only removes what the grammar already settles.
+    """
+
+    class Prune(ast.NodeTransformer):
+        def _body(self, statements: list) -> list:
+            kept = []
+            for statement in statements:
+                kept.append(self.visit(statement))
+                if isinstance(statement, _STOPS):
+                    break
+            return kept
+
+        def visit_FunctionDef(self, node):  # noqa: N802
+            node.body = self._body(node.body)
+            return node
+
+        visit_AsyncFunctionDef = visit_FunctionDef
+
+        def visit_Module(self, node):  # noqa: N802
+            node.body = self._body(node.body)
+            return node
+
+        def visit_ClassDef(self, node):  # noqa: N802
+            node.body = self._body(node.body)
+            return node
+
+        def visit_For(self, node):  # noqa: N802
+            node.body = self._body(node.body)
+            node.orelse = self._body(node.orelse)
+            return node
+
+        visit_AsyncFor = visit_For
+
+        def visit_While(self, node):  # noqa: N802
+            if isinstance(node.test, ast.Constant) and not node.test.value:
+                node.body = []
+                node.orelse = self._body(node.orelse)
+                return node
+            node.body = self._body(node.body)
+            node.orelse = self._body(node.orelse)
+            return node
+
+        def visit_If(self, node):  # noqa: N802
+            if isinstance(node.test, ast.Constant):
+                if node.test.value:
+                    node.orelse = []
+                    node.body = self._body(node.body)
+                else:
+                    node.body = []
+                    node.orelse = self._body(node.orelse)
+                return node
+            node.body = self._body(node.body)
+            node.orelse = self._body(node.orelse)
+            return node
+
+        def visit_With(self, node):  # noqa: N802
+            node.body = self._body(node.body)
+            return node
+
+        visit_AsyncWith = visit_With
+
+        def visit_Try(self, node):  # noqa: N802
+            node.body = self._body(node.body)
+            for handler in node.handlers:
+                handler.body = self._body(handler.body)
+            node.orelse = self._body(node.orelse)
+            node.finalbody = self._body(node.finalbody)
+            return node
+
+    return Prune().visit(tree)
+
 def analyse(source: str) -> dict:
     """Structural facts about a contract, counted from its syntax tree.
 
@@ -594,6 +700,7 @@ def analyse(source: str) -> dict:
     except Exception:
         return facts
     facts["parsed"] = True
+    tree = _reachable(tree)
 
     # Every function defined at any depth, by name, so a call that passes one
     # by reference can be resolved back to its body.
@@ -2235,8 +2342,32 @@ class Unison(gl.Contract):
                 f" answer, and this report's appeal is still unspent"
             )
 
-        if self.contest_of.get(str(rid)) is not None:
-            raise gl.vm.UserError(f"{ERROR_EXPECTED} report {rid} is already contested")
+        # AN APPEAL THAT CHANGED NOTHING DOES NOT SPEND THE APPEAL.
+        #
+        # Refusing every second appeal was the simple rule, and it handed a
+        # stranger a lock: contest one criterion, watch it uphold, and the party
+        # the report is about can never reach the criterion they wanted. Refusing
+        # the counted CONTRACT criteria closed the cheapest version of that,
+        # because those are read from bytes an appeal re-fetches and cannot move.
+        # It did not close the rest. A report carrying a site still has four
+        # counted site marks that a fresh render usually reproduces exactly, so
+        # `contest(id, "finality")` is the same lock with an extra step.
+        #
+        # What is worth protecting is a report that has already been superseded:
+        # the record changed, the previous score is on the note, and a second
+        # appeal would be rewriting a rewrite. An uphold changes nothing, so it
+        # bars nothing. The note is still written, since "somebody challenged
+        # this and a fresh jury agreed" is worth reading, and a griefer can now
+        # only spend their own transactions.
+        held = self.contest_of.get(str(rid))
+        if held is not None:
+            previous = json.loads(held)
+            if str(previous.get("outcome")) == "superseded":
+                raise gl.vm.UserError(
+                    f"{ERROR_EXPECTED} report {rid} was already re-marked on"
+                    f" {previous.get('criterion')}, and a superseded report is"
+                    f" not appealed a second time"
+                )
 
         # ANYONE MAY APPEAL, not only the account that paid for the review.
         # The person with the strongest reason to dispute a mark is whoever

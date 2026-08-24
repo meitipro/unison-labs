@@ -217,7 +217,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   308 checks over its pure half, on plain CPython
+contracts/test_helpers.py   322 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
@@ -300,7 +300,7 @@ npm run dev            # http://localhost:4400
 ```
 
 ```bash
-npm test               # 31 node tests + 308 pure-half contract checks
+npm test               # 31 node tests + 322 pure-half contract checks
 npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```
