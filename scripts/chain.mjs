@@ -9,6 +9,33 @@ import { readFileSync } from "node:fs";
 import { createAccount, createClient } from "genlayer-js";
 import { studionet, testnetBradbury } from "genlayer-js/chains";
 
+/*
+ * `.env.local`, loaded for the scripts too.
+ *
+ * Next.js reads that file, and a plain node script does not, so the same key
+ * that makes the site work left `npm run deploy` asking to be told the key it
+ * was already sitting next to. Anything already in the environment wins, so
+ * exporting a different key for one command still does what it looks like.
+ */
+for (const line of (() => {
+  try {
+    return readFileSync(new URL("../.env.local", import.meta.url), "utf8").split("\n");
+  } catch {
+    return [];
+  }
+})()) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) continue;
+  const at = trimmed.indexOf("=");
+  if (at < 1) continue;
+  const name = trimmed.slice(0, at).trim();
+  if (process.env[name] !== undefined) continue;
+  process.env[name] = trimmed
+    .slice(at + 1)
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
 export class Abort extends Error {}
 
 export function die(message) {

@@ -21,6 +21,7 @@
     "deploy": "node scripts/deploy.mjs",
     "probe": "node scripts/probe.mjs",
     "verify": "node scripts/verify.mjs",
+    "contest": "node scripts/contest.mjs",
     "match": "node scripts/match.mjs"
   },
   "dependencies": {

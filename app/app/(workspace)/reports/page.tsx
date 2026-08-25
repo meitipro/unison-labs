@@ -31,6 +31,24 @@ export const revalidate = 60;
 export default async function ReportsPane() {
   const stats = await getStats();
   const reports = stats ? await getRecentReports(stats, 12) : [];
+
+  /*
+   * THE THIRD STATE, WHICH THIS PAGE WAS ALREADY CLAIMING TO KEEP APART.
+   *
+   * `getStats` answering and `getReport` not answering is an ordinary thing on
+   * a rate-limited node: the counter comes back saying one report exists, the
+   * read of that report drops, `getRecentReports` filters the null away, and an
+   * empty array arrives here. The guard below only asked whether the array was
+   * empty, so the page told a visitor no contract had been marked yet while the
+   * contract held a report and the header beside it was reading v3 off the same
+   * chain.
+   *
+   * The contract publishes how many reports it has issued. If that number is
+   * above zero and none of them could be read, the honest answer is that the
+   * node did not answer, not that there is nothing there.
+   */
+  const expected = stats?.reports ?? 0;
+  const unreadable = expected > 0 && reports.length === 0;
   const splits = await getSplitTable();
   const contested = splits?.filter((row) => row.splits > 0) ?? [];
 
@@ -53,6 +71,12 @@ export default async function ReportsPane() {
         <div className="ws-panel">
           <p className="ws-note" style={{ margin: 0 }}>
             The node did not answer, so this is unknown rather than empty.
+          </p>
+        </div>
+      ) : unreadable ? (
+        <div className="ws-panel">
+          <p className="ws-note" style={{ margin: 0 }}>
+            {copy.reportsUnreadable(expected)}
           </p>
         </div>
       ) : reports.length === 0 ? (

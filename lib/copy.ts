@@ -316,6 +316,20 @@ export const CHAIN_UNREACHABLE =
 export const NO_REPORTS_YET =
   "No contract has been marked yet. This panel shows the newest real report as soon as one exists, and it will not stand in a made-up one meanwhile.";
 
+/**
+ * The counter and the reports disagreeing, which is a reading problem.
+ *
+ * The contract says how many reports it has issued, and each report is a
+ * separate read. On a rate-limited node the count arrives and the reports do
+ * not, and the page used to answer that with NO_REPORTS_YET above: a flat
+ * statement that nothing has been marked, printed underneath a header that was
+ * reading the rubric version off the same chain in the same breath.
+ */
+export function reportsUnreadable(issued: number): string {
+  const many = issued === 1 ? "one report" : `${issued.toLocaleString("en-US")} reports`;
+  return `The contract has issued ${many}, and this browser could not read ${issued === 1 ? "it" : "them"} back just now. That is a rate limit on the node rather than an empty record, and refreshing usually settles it.`;
+}
+
 export const SAMPLES_UNREACHABLE =
   "The validators fetch a sample themselves, and this origin does not resolve from a node. Deploy the site, or point NEXT_PUBLIC_SAMPLE_BASE at a public origin.";
 
