@@ -1699,6 +1699,41 @@ _careful_before = [mark(_careful, c)[0] for c in ("agreement", "untrusted", "bou
 check("a careful contract still scores every counted point", _careful_before, [2, 2, 2, 2])
 check("and the decoy still scores none", [mark(_decoy, c)[0] for c in ("agreement", "untrusted", "boundary", "failure")], [0, 0, 0, 0])
 
+# ---------------------------------------------------------------------------
+# The second fixture, and the distinction it pins.
+#
+# `decoy.py` hides its markers where Python never looks, and parsing sees
+# through that. `deadcode.py` is the next move: every marker in it is real code
+# that really parses, and none of it can run. It passes all six gate checks, so
+# from the outside it is indistinguishable from a careful contract.
+#
+# Parsing is not reachability, and the second one is what "executable
+# structure" means.
+
+_dead_fixture = M["normalise"](fixture("deadcode.py"))
+check("deadcode passes every gate check, like a real contract", M["gate_of"](_dead_fixture)["passed"], 6)
+check("  and parses", M["analyse"](_dead_fixture)["parsed"], True)
+check(
+    "  and scores nothing on every counted criterion",
+    [mark(_dead_fixture, c)[0] for c in ("agreement", "untrusted", "boundary", "failure")],
+    [0, 0, 0, 0],
+)
+check(
+    "  with no non-deterministic block on its jury sheet",
+    dict(M["contract_evidence"](_dead_fixture))["non-deterministic blocks in total"],
+    "0",
+)
+# The three fixtures side by side are the argument, so the spread is asserted
+# rather than left to be noticed.
+check(
+    "careful, decoy and deadcode land 8, 0 and 0",
+    [
+        sum(mark(b, c)[0] for c in ("agreement", "untrusted", "boundary", "failure"))
+        for b in (_careful, _decoy, _dead_fixture)
+    ],
+    [8, 0, 0],
+)
+
 # The report runs on the way out, so that where it sits stops mattering.
 #
 # It used to be an `if FAILURES:` two thirds of the way up the file, and the

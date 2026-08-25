@@ -64,9 +64,15 @@ both saying which is which.
 **A counted mark is read from the syntax tree, not from the characters.** The
 source is parsed and the marks come from nodes Python would execute, so a call
 named in a comment, a docstring or a string literal contributes nothing, and
-`public/fixtures/decoy.py` is kept as the proof: it mentions `strict_eq` twice,
-`run_nondet` three times and two raises, all of them inert, and it scores **zero
-on every counted criterion**.
+Two fixtures are kept as the proof, and they close two different doors.
+`public/fixtures/decoy.py` mentions `strict_eq` twice, `run_nondet` three times
+and two raises, every one of them in a comment, a docstring or a string literal.
+`public/fixtures/deadcode.py` is the next move: its markers are all real code
+that really parses, sitting after a `return` or under an `if False:`, so the
+interpreter reaches the end of every method without touching one. Both pass the
+gate, both are indistinguishable from a careful contract from the outside, and
+both score **zero on every counted criterion** while `careful.py` scores eight
+of eight.
 
 The fact sheet the jury is handed is read from the same tree. It used to count
 substrings, which made it the last place a mention could be mistaken for a call,
@@ -217,7 +223,7 @@ the file on disk, byte for byte.
 
 ```
 contracts/unison.py     the gate, the rubric, the marks, the reports, the splits
-contracts/test_helpers.py   322 checks over its pure half, on plain CPython
+contracts/test_helpers.py   327 checks over its pure half, on plain CPython
 ```
 
 ### Behaviour worth knowing
@@ -300,7 +306,7 @@ npm run dev            # http://localhost:4400
 ```
 
 ```bash
-npm test               # 31 node tests + 322 pure-half contract checks
+npm test               # 31 node tests + 327 pure-half contract checks
 npm run lint:contract  # genvm-lint
 npm run match -- 0x...   # is the deployed contract the source on disk?
 ```
