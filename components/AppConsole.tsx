@@ -434,10 +434,17 @@ export default function AppConsole({
             <button type="submit" className="ws-run" disabled={!ready}>
               {copy.BUTTON}
             </button>
-            <span className="ws-mono-quiet" style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "normal" }}>
+            <span
+              className="ws-mono-quiet"
+              /* flexWrap and minWidth 0 together. A flex item defaults to
+                 min-width:auto, which refuses to shrink below its content,
+                 so this row pushed the whole workspace 35px wide at 320 and
+                 the page scrolled sideways on a phone. */
+              style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "normal", flexWrap: "wrap", minWidth: 0 }}
+            >
                 <span>{copy.SAMPLES_LEAD}</span>
                 {copy.SAMPLES.map((sample, index) => (
-                  <span key={sample.file} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <span key={sample.file} style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                     {index > 0 ? <span aria-hidden="true">-</span> : null}
                     <button
                       type="button"
@@ -453,7 +460,7 @@ export default function AppConsole({
                   </span>
                 ))}
             </span>
-            <span className="ws-mono-quiet" style={{ marginLeft: "auto" }}>
+            <span className="ws-mono-quiet" style={{ marginLeft: "auto", minWidth: 0 }}>
               {ready ? "or press cmd + enter" : "nothing to review yet"}
             </span>
           </div>
