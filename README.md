@@ -37,6 +37,60 @@ one produces LF, and the same commit yields two different digests.
 
 ---
 
+## How a mark is decided, and how to check it yourself
+
+Nothing below has to be taken on trust. Each of the three is reproducible from
+this repository against the live contract.
+
+### A mark comes from executable structure, never from counting characters
+
+No substring counter is called anywhere in the marking path. Every counted mark,
+and the fact sheet the jury is handed alongside them, is read from the parsed
+syntax tree, pruned first to the statements the language can actually reach.
+
+Three fixtures make the difference visible. All three pass every gate check, so
+none of them is distinguishable from a careful contract from the outside:
+
+| fixture | what it is | scores |
+| --- | --- | --- |
+| [`careful.py`](public/fixtures/careful.py) | does the work | **8 of 8** counted |
+| [`decoy.py`](public/fixtures/decoy.py) | every marker sits in a comment, a docstring or a string literal | **0** |
+| [`deadcode.py`](public/fixtures/deadcode.py) | every marker is real code, placed after a `return` or under `if False:` | **0** |
+
+The second and third close different doors. Parsing alone sees through the
+decoy, and reads the dead code as a careful contract; a node in the tree is not
+a node Python would execute, and only the second one is what the mark turns on.
+
+Submit either one and read the number that comes back:
+
+```
+https://raw.githubusercontent.com/meitipro/unison-labs/main/public/fixtures/decoy.py
+https://raw.githubusercontent.com/meitipro/unison-labs/main/public/fixtures/deadcode.py
+```
+
+### A report is bound to bytes that cannot move
+
+Every report records the resolved commit beside the sha256 of the bytes that
+were marked. A branch is resolved to the commit it points at before anything is
+fetched, and where a host publishes no revision the report says so rather than
+implying one. An appeal re-fetches the source and refuses outright if it no
+longer hashes to the digest on the record.
+
+### An appeal can change the number, and cannot be taken away
+
+Appeals are a button on the report itself, open to anyone rather than to
+whoever paid, because the party with the strongest reason to dispute a mark is
+whoever wrote the code. A fresh jury re-marks the criterion against the same
+published anchors, and a different answer supersedes the report with the
+previous score kept on the record.
+
+An appeal on a mark counted from bytes that cannot have moved is refused, and
+the report's appeal is left unspent, so a stranger cannot spend it on a
+criterion that could never change and lock the author out. An appeal that
+upholds does not spend it either.
+
+---
+
 ## Overview
 
 Point Unison at a GenLayer contract, and the validators fetch the raw file
