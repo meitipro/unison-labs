@@ -34,63 +34,6 @@ deployed bytes against `contracts/unison.py` byte for byte.
 Line endings are pinned to LF in `.gitattributes` precisely so that check is
 not platform dependent: without it a Windows checkout produces CRLF, a Linux
 one produces LF, and the same commit yields two different digests.
-
----
-
-## How a mark is decided, and how to check it yourself
-
-Nothing below has to be taken on trust. Each of the three is reproducible from
-this repository against the live contract.
-
-### A mark comes from executable structure, never from counting characters
-
-No substring counter is called anywhere in the marking path. Every counted mark,
-and the fact sheet the jury is handed alongside them, is read from the parsed
-syntax tree, pruned first to the statements the language can actually reach.
-
-Three fixtures make the difference visible. All three pass every gate check, so
-none of them is distinguishable from a careful contract from the outside:
-
-| fixture | what it is | scores |
-| --- | --- | --- |
-| [`careful.py`](public/fixtures/careful.py) | does the work | **8 of 8** counted |
-| [`decoy.py`](public/fixtures/decoy.py) | every marker sits in a comment, a docstring or a string literal | **0** |
-| [`deadcode.py`](public/fixtures/deadcode.py) | every marker is real code, placed after a `return` or under `if False:` | **0** |
-
-The second and third close different doors. Parsing alone sees through the
-decoy, and reads the dead code as a careful contract; a node in the tree is not
-a node Python would execute, and only the second one is what the mark turns on.
-
-Submit either one and read the number that comes back:
-
-```
-https://raw.githubusercontent.com/meitipro/unison-labs/main/public/fixtures/decoy.py
-https://raw.githubusercontent.com/meitipro/unison-labs/main/public/fixtures/deadcode.py
-```
-
-### A report is bound to bytes that cannot move
-
-Every report records the resolved commit beside the sha256 of the bytes that
-were marked. A branch is resolved to the commit it points at before anything is
-fetched, and where a host publishes no revision the report says so rather than
-implying one. An appeal re-fetches the source and refuses outright if it no
-longer hashes to the digest on the record.
-
-### An appeal can change the number, and cannot be taken away
-
-Appeals are a button on the report itself, open to anyone rather than to
-whoever paid, because the party with the strongest reason to dispute a mark is
-whoever wrote the code. A fresh jury re-marks the criterion against the same
-published anchors, and a different answer supersedes the report with the
-previous score kept on the record.
-
-An appeal on a mark counted from bytes that cannot have moved is refused, and
-the report's appeal is left unspent, so a stranger cannot spend it on a
-criterion that could never change and lock the author out. An appeal that
-upholds does not spend it either.
-
----
-
 ## Overview
 
 Point Unison at a GenLayer contract, and the validators fetch the raw file
@@ -102,7 +45,7 @@ first.
 The result is drawn as a gold streak on dark stone, its length the score, read
 against reference marks at 4, 7 and 9 like an assay card.
 
-Two design decisions carry the product:
+Four design decisions carry the product:
 
 **The rubric was frozen by the transaction that deployed the contract.** Every
 criterion, every anchor, every gate probe and every band boundary is fixed in
@@ -116,32 +59,27 @@ an inference, and the rest go to the jury, with the rubric page and `rubric()`
 both saying which is which.
 
 **A counted mark is read from the syntax tree, not from the characters.** The
-source is parsed and the marks come from nodes Python would execute, so a call
-named in a comment, a docstring or a string literal contributes nothing, and
-Two fixtures are kept as the proof, and they close two different doors.
-`public/fixtures/decoy.py` mentions `strict_eq` twice, `run_nondet` three times
-and two raises, every one of them in a comment, a docstring or a string literal.
-`public/fixtures/deadcode.py` is the next move: its markers are all real code
-that really parses, sitting after a `return` or under an `if False:`, so the
-interpreter reaches the end of every method without touching one. Both pass the
-gate, both are indistinguishable from a careful contract from the outside, and
-both score **zero on every counted criterion** while `careful.py` scores eight
-of eight.
+source is parsed, the tree is pruned to the statements the language can reach,
+and the marks come from what is left. A call named in a comment, a docstring or
+a string literal contributes nothing, and neither does one written after a
+`return` or under an `if False:`. The fact sheet the jury is handed alongside
+those marks is read from the same tree, so a marker and a model are looking at
+the same file rather than at two readings of it.
 
-The fact sheet the jury is handed is read from the same tree. It used to count
-substrings, which made it the last place a mention could be mistaken for a call,
-and the worst place for that to be left: the counted marks caught the decoy and
-scored it 1 out of 10, while the sheet told the jury, as fact, that the same file
-made five non-deterministic blocks and two calls to a model. Every number a
-marker sees now comes from a node.
+Three fixtures hold that line in place, and all of them pass every gate check,
+so none is distinguishable from a careful contract from outside.
+`public/fixtures/careful.py` does the work and scores eight of the eight counted
+points. `decoy.py` puts every marker in a comment or a docstring and scores
+nothing. `deadcode.py` writes them as real code the interpreter never reaches,
+and scores nothing either. The two failures are different failures: parsing
+alone sees through the first and reads the second as careful.
 
-**A keyword is a word.** The site half reads a rendered page, and a mark handed
-out for a run of characters inside an unrelated word is the same defect wearing
-different clothes: "losing" sits inside "closing", so a shop with a sale banner
-was credited with an appeals process, and "accepted" beside "finalise your
-order" scored a checkout page 2 out of 2 for telling acceptance apart from
-finality. Boundaries are checked against a literal alphabet, with no regular
-expression on either side.
+**A keyword is a word.** The site half reads a rendered page rather than source,
+so a mark turns on whether a word is present, and a word is matched at its
+boundaries. "Losing" inside "closing" is not a losing path, and "accepted" beside
+"finalise your order" is a checkout rather than a transaction. Boundaries are
+checked against a literal alphabet, with no regular expression on either side of
+the product.
 
 ---
 
@@ -297,6 +235,20 @@ contracts/test_helpers.py   327 checks over its pure half, on plain CPython
   nobody wrote to.
 - **Untrusted source text is fenced at the prompt boundary**, angle brackets
   replaced, so a contract cannot address the validator reading it.
+- **A report cites a commit, not a branch.** The reference is resolved to the
+  revision it points at before anything is fetched, and the sha256 of the bytes
+  sits beside it, so the citation and the identity are both on the record. Where
+  a host publishes no revision the report says that rather than implying one.
+- **An appeal re-marks, and anyone may open one.** The validators fetch the same
+  bytes again and refuse outright if they no longer hash to the digest on the
+  record, then a fresh jury marks the disputed criterion against the same
+  published anchors. A different answer supersedes the report and keeps the
+  previous score on it. The route is open to whoever wrote the code rather than
+  to whoever paid, since those are rarely the same account.
+- **An appeal that could not change anything is refused before it is spent.** A
+  criterion counted from bytes the appeal has just re-fetched arrives at the same
+  number by construction, so opening one on that leaves the report's appeal
+  untouched, and a stranger cannot spend somebody else's.
 - **The two subjects are never added together.** A careful contract behind a
   careless site is a different problem from the reverse, and one number for both
   hides which you have.
