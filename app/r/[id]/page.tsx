@@ -18,6 +18,7 @@ import SiteHeader from "../../../components/SiteHeader";
 import Streak from "../../../components/Streak";
 import { MarksTable } from "../../../components/Marks";
 import CopyLink from "./CopyLink";
+import Appeal from "./Appeal";
 import * as copy from "../../../lib/copy";
 import * as fmt from "../../../lib/format";
 import {
@@ -218,6 +219,22 @@ export default async function ReportPage({ params }: Params) {
           <p className="body" style={{ margin: 0 }}>{copy.CARD_2_BODY}</p>
         </div>
       </div>
+
+      {/*
+        The appeal, on the page it is about.
+
+        `contest` was reachable only by cloning the repository and running a
+        node script, which is recourse a contract author never finds. The
+        criteria offered are the ones this report actually carries a mark for,
+        so nothing here can ask the chain a question about a criterion that is
+        not on it.
+      */}
+      <Appeal
+        id={report.id}
+        criteria={report.subjects.flatMap((subject) => subject.marks.map((m) => m.id))}
+        names={names}
+        alreadyContested={report.contest?.outcome === "superseded"}
+      />
 
       <div style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <CopyLink id={report.id} />

@@ -276,6 +276,25 @@ export function finalized(id: number): string {
   return `Finalized - report ${id}`;
 }
 
+/**
+ * The appeal, said on the report rather than in a repository.
+ *
+ * `contest` has been a public method since the contract was written and the
+ * only way to reach it was a node script, which is recourse a contract author
+ * cannot find. These are the words on the button that fixes that.
+ */
+export const APPEAL_OPEN = "Appeal a mark";
+export const APPEAL_TITLE = "Appeal a mark";
+export const APPEAL_NOTE =
+  "The validators fetch the same bytes again, refuse outright if they have moved since, and a fresh jury marks the criterion you name against the same published anchors. Agreement leaves the report as it is, and a different answer replaces it with the old score kept on the record. Anyone may do this, including somebody who did not pay for the review.";
+export const APPEAL_PICK = "Which mark";
+export const APPEAL_SEND = "Send the appeal";
+export const APPEAL_CANCEL = "Not now";
+export const APPEAL_HEARD =
+  "The appeal was heard and the chain has it. Reload to read the report as it stands now.";
+export const APPEAL_SPENT =
+  "This report was re-marked on appeal, so the record already moved once and is not appealed a second time.";
+
 export function contested(c: {
   criterion: string;
   was: number;
