@@ -1734,6 +1734,337 @@ check(
     [8, 0, 0],
 )
 
+# ---------------------------------------------------------------------------
+# The rules check, advisory and never scored.
+#
+# Each check is tested both ways, because a check that never fires is as useless
+# as one that always does, and the real fixtures are pinned so the list a report
+# carries cannot drift without a test noticing.
+
+_rf = M["rule_findings"]
+_ctor = M["constructor_of"]
+
+
+def _checks(src):
+    return [f["check"] for f in _rf(src)]
+
+
+_HEAD = "from genlayer import *\n"
+
+check("seven checks are published", len(M["RULE_CHECKS"]), 7)
+check("  and every check id is unique", len({c[0] for c in M["RULE_CHECKS"]}), 7)
+check_true("  and every one carries a title and a fix", all(c[2] and c[3] for c in M["RULE_CHECKS"]))
+
+# -- a write that never asks who called it (rule 05) ------------------------
+_open_write = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    n: u256\n"
+    "    @gl.public.write\n"
+    "    def bump(self) -> None:\n"
+    "        self.n += u256(1)\n"
+)
+check("a write that never reads the sender is found", _checks(_open_write), ["write_without_sender"])
+check("  and it is named", _rf(_open_write)[0]["name"], "bump")
+_gated_write = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    n: u256\n"
+    "    owner: Address\n"
+    "    @gl.public.write\n"
+    "    def bump(self) -> None:\n"
+    "        if gl.message.sender_address != self.owner:\n"
+    "            raise gl.vm.UserError('no')\n"
+    "        self.n += u256(1)\n"
+)
+check("a write that reads the sender is not", _checks(_gated_write), [])
+_helper_write = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    n: u256\n"
+    "    owner: Address\n"
+    "    def _only_owner(self) -> None:\n"
+    "        if gl.message.sender_address != self.owner:\n"
+    "            raise gl.vm.UserError('no')\n"
+    "    @gl.public.write\n"
+    "    def bump(self) -> None:\n"
+    "        self._only_owner()\n"
+    "        self.n += u256(1)\n"
+)
+check("a write gated through a helper passes", _checks(_helper_write), [])
+
+# -- storage types the runtime refuses ---------------------------------------
+_int_field = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    count: int\n"
+    "    def __init__(self) -> None:\n"
+    "        pass\n"
+)
+check("an int storage field is found", _checks(_int_field), ["storage_type"])
+check("  and names the field and the type", _rf(_int_field)[0]["name"], "count: int")
+check("a u256 field is not", _checks(_int_field.replace("count: int", "count: u256")), [])
+check(
+    "a list inside a TreeMap is found",
+    _checks(_int_field.replace("count: int", "m: TreeMap[str, list[str]]")),
+    ["storage_type"],
+)
+check(
+    "a ClassVar constant is not storage",
+    _checks(_int_field.replace("count: int", "LIMIT: typing.ClassVar[int] = 5")),
+    [],
+)
+
+# -- a field written on self that the class never declared -------------------
+_undeclared = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    total: u256\n"
+    "    def __init__(self) -> None:\n"
+    "        self.total = u256(0)\n"
+    "        self.cache = ''\n"
+)
+check("a field written and never declared is found", _checks(_undeclared), ["undeclared_field"])
+check("  and it is named", _rf(_undeclared)[0]["name"], "cache")
+_subscript = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    rows: TreeMap[str, str]\n"
+    "    def __init__(self) -> None:\n"
+    "        self.rows['a'] = 'b'\n"
+)
+check("mutating a declared collection is not", _checks(_subscript), [])
+
+# -- a storage collection built with its own constructor ---------------------
+# Declaring one inside a storage dataclass is fine, and live contracts do it:
+# Vouchsafe keeps `recent: DynArray[Entry]` on a record and appends to it. What
+# the runtime refuses is `DynArray[T]()`, because only storage may allocate one.
+# The first version of this check flagged the declaration and accused eleven
+# fields across five working contracts, two of them live.
+_in_dataclass = _HEAD + (
+    "@allow_storage\n"
+    "@dataclass\n"
+    "class Task:\n"
+    "    title: str\n"
+    "    steps: DynArray[str]\n"
+)
+check("a collection declared inside a storage dataclass is not a finding", _checks(_in_dataclass), [])
+_built = _HEAD + (
+    "@allow_storage\n"
+    "@dataclass\n"
+    "class Claim:\n"
+    "    checks: DynArray[str]\n"
+    "class C(gl.Contract):\n"
+    "    claims: DynArray[Claim]\n"
+    "    @gl.public.write\n"
+    "    def add(self) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        self.claims.append(Claim(checks=DynArray[str]()))\n"
+)
+check("a collection built with its own constructor is found", _checks(_built), ["storage_constructor"])
+check("  and it is named", _rf(_built)[0]["name"], "DynArray")
+check(
+    "the same collection from inmem_allocate is not",
+    _checks(_built.replace("DynArray[str]()", "gl.storage.inmem_allocate(DynArray[str])")),
+    [],
+)
+check("a bare TreeMap() is found too", _checks(_HEAD + "m = TreeMap()\n"), ["storage_constructor"])
+
+# A write gated on origin_address is gated. The SDK exposes both on gl.message,
+# and a check that only knew sender_address would accuse a contract that binds
+# the origin instead.
+_origin_write = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    n: u256\n"
+    "    owner: Address\n"
+    "    @gl.public.write\n"
+    "    def bump(self) -> None:\n"
+    "        if gl.message.origin_address != self.owner:\n"
+    "            raise gl.vm.UserError('no')\n"
+    "        self.n += u256(1)\n"
+)
+check("a write gated on origin_address passes too", _checks(_origin_write), [])
+
+# -- a clock the contract does not have --------------------------------------
+check("reading the wall clock is found", _checks(_HEAD + "import time\nstamp = time.time()\n"), ["wall_clock"])
+check("the deterministic clock is not", _checks(_HEAD + "stamp = gl.message_raw['datetime']\n"), [])
+
+# -- a non-deterministic call no block can reach -----------------------------
+_loose = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    out: str\n"
+    "    @gl.public.write\n"
+    "    def go(self, url: str) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        self.out = gl.nondet.web.get(url).body.decode()\n"
+)
+check("a nondet call straight from a write is found", _checks(_loose), ["nondet_outside_block"])
+_blocked = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    out: str\n"
+    "    @gl.public.write\n"
+    "    def go(self, url: str) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        def one() -> str:\n"
+    "            return gl.nondet.web.get(url).body.decode()\n"
+    "        self.out = gl.eq_principle.strict_eq(one)\n"
+)
+check("the same call inside a block is not", _checks(_blocked), [])
+_via_helper = _HEAD + (
+    "def fetch(url: str) -> str:\n"
+    "    return gl.nondet.web.get(url).body.decode()\n"
+    "class C(gl.Contract):\n"
+    "    out: str\n"
+    "    @gl.public.write\n"
+    "    def go(self, url: str) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        def one() -> str:\n"
+    "            return fetch(url)\n"
+    "        self.out = gl.eq_principle.strict_eq(one)\n"
+)
+check("a helper a block calls is reachable", _checks(_via_helper), [])
+_lambda = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    out: str\n"
+    "    @gl.public.write\n"
+    "    def go(self, url: str) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        self.out = gl.eq_principle.strict_eq(lambda: gl.nondet.web.get(url).body.decode())\n"
+)
+check("a lambda handed to a block is a block", _checks(_lambda), [])
+# The regression this check was most likely to have: two methods each defining
+# a closure called `one`. Resolving by name alone would find the first `one`
+# for both, leave the second method's closure outside every block, and accuse a
+# correct contract.
+_shadow = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    a: str\n"
+    "    b: str\n"
+    "    @gl.public.write\n"
+    "    def first(self, u: str) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        def one() -> str:\n"
+    "            return 'x'\n"
+    "        self.a = gl.eq_principle.strict_eq(one)\n"
+    "    @gl.public.write\n"
+    "    def second(self, u: str) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        def one() -> str:\n"
+    "            return gl.nondet.web.get(u).body.decode()\n"
+    "        self.b = gl.eq_principle.strict_eq(one)\n"
+)
+check("two closures named alike each resolve to their own method", _checks(_shadow), [])
+
+# -- a storage value compared by identity ------------------------------------
+_identity = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    rows: DynArray[str]\n"
+    "    @gl.public.write\n"
+    "    def same(self) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        if self.rows[0] is self.rows[1]:\n"
+    "            pass\n"
+)
+check("a storage value compared by identity is found", _checks(_identity), ["identity_compare"])
+check(
+    "comparing to None is not",
+    _checks(_identity.replace("self.rows[0] is self.rows[1]", "self.rows.get(0) is None")),
+    [],
+)
+
+# -- the pruned tree, the caps, determinism ----------------------------------
+_dead_find = _HEAD + (
+    "import time\n"
+    "class C(gl.Contract):\n"
+    "    n: u256\n"
+    "    @gl.public.write\n"
+    "    def f(self) -> None:\n"
+    "        _ = gl.message.sender_address\n"
+    "        return\n"
+    "        self.ghost = 1\n"
+    "        time.time()\n"
+    "        gl.nondet.web.get('https://x')\n"
+)
+check("what cannot run is not reported", _checks(_dead_find), [])
+_many = _HEAD + "class C(gl.Contract):\n    def __init__(self) -> None:\n" + "".join(
+    f"        self.f{i} = 1\n" for i in range(30)
+)
+check("a check reports at most five", sum(1 for f in _rf(_many) if f["check"] == "undeclared_field"), 5)
+check_true("  and the whole list stays capped", len(_rf(_many)) <= 20)
+check("the same source gives the same findings", _rf(_open_write) == _rf(_open_write), True)
+check("a source that will not parse gets none", _rf("def oops(:\n"), [])
+
+# -- the constructor the deploy form asks for --------------------------------
+_args_ctor = _HEAD + (
+    "class C(gl.Contract):\n"
+    "    def __init__(self, owner: Address, limit: u256 = u256(5), *, note: str = '') -> None:\n"
+    "        pass\n"
+)
+check(
+    "__init__ parameters are read in order, with their types and defaults",
+    _ctor(_args_ctor),
+    [
+        {"name": "owner", "type": "Address", "optional": False, "keyword": False},
+        {"name": "limit", "type": "u256", "optional": True, "keyword": False},
+        {"name": "note", "type": "str", "optional": True, "keyword": True},
+    ],
+)
+check("a no-argument __init__ asks for nothing", _ctor(_careful), [])
+check("no contract class means no form", _ctor(_HEAD + "x = 1\n"), [])
+
+# -- the real files ----------------------------------------------------------
+_own_source = M["normalise"](SOURCE.read_text(encoding="utf-8"))
+check("unison.py deploys with no arguments", _ctor(_own_source), [])
+check(
+    "unison.py flags only the write it leaves open on purpose",
+    [(f["check"], f["name"]) for f in _rf(_own_source)],
+    [("write_without_sender", "record_split")],
+)
+
+
+# ---------------------------------------------------------------------------
+# Rule 06, applied to this contract.
+#
+# Every public write reads the sender, minus the ones left open on purpose, each
+# with its reason written HERE, so a later tightening has to argue with a test
+# rather than delete a comment. Independent of `rule_findings` on purpose: a
+# check that grades itself with its own code proves nothing about either.
+
+import ast as _ast06
+
+_OPEN_ON_PURPOSE = {
+    "record_split": (
+        "Anyone may ask the network which anchor failed to separate two careful "
+        "markers on a source that did not settle. It changes no report and moves "
+        "no value, it is counted once per digest, and a source that settled "
+        "refuses it, so restricting it to the submitter would only leave a split "
+        "nobody could record once the submitter walked away."
+    ),
+}
+
+_writes06 = {}
+for _node06 in _ast06.walk(_ast06.parse(SOURCE.read_text(encoding="utf-8"))):
+    if not isinstance(_node06, _ast06.ClassDef):
+        continue
+    for _fn06 in _node06.body:
+        if isinstance(_fn06, _ast06.FunctionDef) and any(
+            "public.write" in _ast06.unparse(d) for d in _fn06.decorator_list
+        ):
+            _writes06[_fn06.name] = any(
+                isinstance(n, _ast06.Attribute) and n.attr in ("sender_address", "origin_address")
+                for n in _ast06.walk(_fn06)
+            )
+
+check_true("the contract has public writes to hold to rule 06", len(_writes06) > 0)
+check(
+    "every public write reads the sender, or is open on purpose with its reason here",
+    sorted(n for n, reads in _writes06.items() if not reads and n not in _OPEN_ON_PURPOSE),
+    [],
+)
+check(
+    "nothing is excused that is not a write, or that has since started reading the sender",
+    sorted(n for n in _OPEN_ON_PURPOSE if n not in _writes06 or _writes06[n]),
+    [],
+)
+check_true(
+    "every excuse is written out rather than left blank",
+    all(len(reason) > 80 for reason in _OPEN_ON_PURPOSE.values()),
+)
+
 # The report runs on the way out, so that where it sits stops mattering.
 #
 # It used to be an `if FAILURES:` two thirds of the way up the file, and the

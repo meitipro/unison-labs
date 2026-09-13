@@ -19,6 +19,7 @@ import Streak from "../../../components/Streak";
 import { MarksTable } from "../../../components/Marks";
 import CopyLink from "./CopyLink";
 import Appeal from "./Appeal";
+import PreDeploy from "../../../components/PreDeploy";
 import * as copy from "../../../lib/copy";
 import * as fmt from "../../../lib/format";
 import {
@@ -28,7 +29,7 @@ import {
   explorerAddress,
   HAS_EXPLORER,
 } from "../../../lib/chain";
-import { getReport, getRubric } from "../../../lib/unison";
+import { getReport, getRubric, getRules } from "../../../lib/unison";
 
 export const revalidate = 30;
 
@@ -51,7 +52,7 @@ export default async function ReportPage({ params }: Params) {
   const id = Number(params.id);
   if (!Number.isFinite(id)) notFound();
 
-  const [report, rubric] = await Promise.all([getReport(id), getRubric()]);
+  const [report, rubric, ruleChecks] = await Promise.all([getReport(id), getRubric(), getRules()]);
 
   if (!IS_LIVE) {
     return (
@@ -235,6 +236,12 @@ export default async function ReportPage({ params }: Params) {
         names={names}
         alreadyContested={report.contest?.outcome === "superseded"}
       />
+
+      {/*
+        Before you deploy: the suggestions, the rules check and the button, on
+        the page that shows the digest all three are about.
+      */}
+      <PreDeploy report={report} rubric={rubric} ruleChecks={ruleChecks} />
 
       <div style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <CopyLink id={report.id} />

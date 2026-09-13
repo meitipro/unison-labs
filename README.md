@@ -69,6 +69,7 @@ one file rather than at two readings of it.
 | 5 | Validators fetch the source | Every one of them fetches it itself and agrees on the bytes under `strict_eq` |
 | 6 | They mark it | Counted criteria in deterministic code, judged criteria by inference, both against anchors published in advance |
 | 7 | The contract sums and bands | Arithmetic, in the contract. No model is ever asked for a total |
+| 8 | You deploy the reviewed bytes, if you choose | The browser fetches the file again, refuses unless it hashes to the report's digest, and deploys from your wallet |
 
 Where the jury does not land on the same answer **no report is issued at all**,
 because averaging a disagreement produces a number nobody voted for. The review
@@ -102,8 +103,8 @@ That boundary is the whole architecture:
 
 ## The contract
 
-**11 public methods, 8 view and 3 write**, `genvm-lint` clean, pinned to a
-concrete runner hash rather than an alias. `contracts/test_helpers.py` runs 327
+**12 public methods, 9 view and 3 write**, `genvm-lint` clean, pinned to a
+concrete runner hash rather than an alias. `contracts/test_helpers.py` runs 371
 checks over its pure half on plain CPython, and `tests/parity` re-derives the
 gate in TypeScript so the browser and the chain cannot drift apart.
 
@@ -137,6 +138,20 @@ gate in TypeScript so the browser and the chain cannot drift apart.
   criterion counted from bytes the appeal has just re-fetched arrives at the
   same number by construction, so opening one there leaves the report's appeal
   untouched and a stranger cannot spend somebody else's.
+- **Every report carries a rules check.** Alongside the marks, the contract
+  reads the same pruned tree for what real rejections and failed deployments
+  were made of: a write that never reads who called it, a storage type the
+  runtime refuses at deploy, a field written on self without being declared, a
+  storage collection built with its own constructor, a clock the contract does
+  not have, a non-deterministic call no block can reach, and a storage value
+  compared by identity. Advisory, never scored, and published by `rules()` so
+  each finding reads against the check that raised it.
+- **The page that shows the digest can deploy those bytes.** Each suggestion
+  is the published anchor one step above a mark. The deploy fetches the file
+  again and refuses to sign unless it hashes to the report's digest, sends it
+  from the author's own wallet, then reads the new contract back and says
+  whether its bytes match. The constructor form is read off `__init__` by the
+  contract and stored on the report as `init_params`.
 - **The two subjects are never added together.** A careful contract behind a
   careless site is a different problem from the reverse, and one number for both
   hides which you have.
@@ -172,7 +187,7 @@ failure.
 
 ## What stands between a url and a number
 
-Eight mechanisms, all of them in the contract, all of them running on every
+Ten mechanisms, nine of them in the contract and running on every
 assay.
 
 1. **A rubric that cannot move.** Criteria, anchors, gate probes and band
@@ -195,6 +210,11 @@ assay.
 8. **An appeal that can change the number.** A fresh jury re-marks against the
    same anchors, open to whoever wrote the code, and one that could not have
    changed anything is refused rather than spent.
+9. **A rules check on every report.** Seven checks drawn from real rejections,
+   read off the same tree as the marks, so code that cannot run raises nothing.
+10. **A deploy bound to the review.** The bytes are fetched again and have to
+    hash to the report's digest before anything is signed, and are read back
+    after.
 
 Three fixtures hold the third of those in place, and all of them pass every gate
 check, so none is distinguishable from a careful contract from the outside:

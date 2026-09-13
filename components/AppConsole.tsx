@@ -783,6 +783,15 @@ function ReportPanel({
             <Link href={`/r/${report.id}`} className="ws-ghost">
               Open the permalink
             </Link>
+            {/* The suggestions, the rules check and the deploy button sit on the
+                report itself, beside the digest they are all about. */}
+            <Link
+              href={`/r/${report.id}#before-you-deploy`}
+              className="ws-run"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
+            >
+              {copy.PREDEPLOY_EYEBROW}
+            </Link>
           </div>
         </div>
 

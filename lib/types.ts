@@ -105,6 +105,10 @@ export type Report = {
    * and either landed on the same score or did not. `was` and `now` are kept
    * apart so a superseded report still shows what it used to say.
    */
+  /** Advisory, never scored. Absent on a report written before the check existed. */
+  rules?: RuleFinding[];
+  /** What deploying this source asks for, read off its __init__ by the contract. */
+  init_params?: InitParam[];
   contest?: {
     criterion: string;
     at: string;
@@ -134,3 +138,22 @@ export type Stats = {
   rubric: string;
 };
 
+
+
+/**
+ * One finding from the contract's rules check. The title and the fix are
+ * published once by `rules()` and joined in on the page, so a report stores
+ * only which check fired, on which line, and what it is about.
+ */
+export type RuleFinding = { check: string; line: number; name: string };
+
+/** A published rules check, as `rules()` returns it. */
+export type RuleCheck = { id: string; rule: string; title: string; fix: string };
+
+/**
+ * One parameter the deploy form asks for. Stored on the report as
+ * `init_params` rather than `constructor`, since every plain object already
+ * answers to that name, and an old report without the key would hand back
+ * the Object function instead of undefined.
+ */
+export type InitParam = { name: string; type: string; optional: boolean; keyword: boolean };

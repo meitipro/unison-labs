@@ -15,7 +15,7 @@ import { cache } from "react";
 import { createClient } from "genlayer-js";
 
 import { CHAIN, IS_LIVE, CONTRACT } from "./chain";
-import type { Report, Rubric, SplitRow, Stats } from "./types";
+import type { Report, Rubric, RuleCheck, SplitRow, Stats } from "./types";
 
 /** A read-only client. No account, so nothing here can ever sign anything. */
 function reader() {
@@ -116,6 +116,18 @@ export const getRubric = cache(async function getRubric(): Promise<Rubric | null
 /** The gate, probes and all, so the browser runs the chain's gate rather than a copy. */
 export async function getGateSpec() {
   return parse<{ head_chars: number; checks: unknown[] }>(await read("gate_spec"));
+}
+
+/**
+ * The rules check the contract publishes, one row per check.
+ *
+ * Null where the node did not answer, and null against a contract deployed
+ * before `rules()` existed. The page shows either as a reading problem rather
+ * than as a clean result, since neither is evidence that nothing fired.
+ */
+export async function getRules(): Promise<RuleCheck[] | null> {
+  const parsed = parse<RuleCheck[]>(await read("rules"));
+  return Array.isArray(parsed) ? parsed : null;
 }
 
 export const getReport = cache(async function getReport(id: number): Promise<Report | null> {

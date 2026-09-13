@@ -294,6 +294,49 @@ export const APPEAL_HEARD =
   "The appeal was heard and the chain has it. Reload to read the report as it stands now.";
 export const APPEAL_SPENT =
   "This report was re-marked on appeal, so the record already moved once and is not appealed a second time.";
+/**
+ * Before you deploy: the suggestions, the rules check, and the button.
+ *
+ * Every suggestion is two anchors the contract published, and every rule is
+ * one the contract checks and publishes, so nothing in the section is advice
+ * this site made up.
+ */
+export const PREDEPLOY_EYEBROW = "Before you deploy";
+export const PREDEPLOY_HEADING = "What to change, then deploy the reviewed bytes";
+export const SUGGEST_TITLE = "Where the next point is";
+export const SUGGEST_NOTE =
+  "Each row is why a mark landed where it did and the anchor one step up, as the contract published it. Counted criteria come first, since changing the source is certain to move them.";
+export const SUGGEST_NONE =
+  "Every criterion is at its full mark, so there is nothing left in the rubric for this source to reach.";
+export const SUGGEST_NEXT = "next";
+export const SUGGEST_COUNTED = "counted";
+export const SUGGEST_JUDGED = "judged";
+export const RULES_TITLE = "The rules check";
+export const RULES_NOTE =
+  "Advisory and never scored. Each finding names a rule a real rejection or a failed deployment paid for, read off the code this contract can actually run.";
+export const RULES_NONE = "No finding. None of the checks fired on the code this contract can run.";
+export const RULES_UNREAD =
+  "The rules could not be read from the contract just now, so each finding is shown by its id alone. That is a reading problem rather than a different result.";
+export function rulesWhere(line: number, name: string): string {
+  return `line ${line} - ${name}`;
+}
+export const DEPLOY_TITLE = "Deploy these exact bytes";
+export const DEPLOY_NOTE =
+  "The file is fetched again and has to hash to this report's digest before anything is signed, so what goes on chain is exactly what was reviewed. It deploys from your own wallet, and the new contract is yours.";
+export const DEPLOY_ARGS = "What the constructor asks for";
+export const DEPLOY_BUTTON = "Deploy this contract";
+export const DEPLOY_DONE_LEAD = "Deployed at";
+export const DEPLOY_MATCH = "The deployed bytes hash to this report's digest.";
+export const DEPLOY_MISMATCH =
+  "The deployed bytes do not hash to this report's digest. Read the contract back before relying on it.";
+export const DEPLOY_UNREAD =
+  "The new contract could not be read back just now, so whether its bytes match is unchecked rather than failed. Reload in a moment.";
+export const DEPLOY_OLDER =
+  "The deploy form is read off the contract's constructor, which reports record from this version on. Run this source through a fresh review and the form appears here.";
+export function argsMissing(names: string[]): string {
+  return names.length === 1 ? `${names[0]} is required.` : `${names.join(", ")} are required.`;
+}
+
 
 export function contested(c: {
   criterion: string;

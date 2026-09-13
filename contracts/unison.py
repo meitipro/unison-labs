@@ -1672,6 +1672,451 @@ def _clean_url(raw: str, what: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# The rules check. Advisory, never scored, and never part of a total.
+#
+# The rubric says how good a contract is. This says whether it will survive the
+# runtime and the review, read off the same pruned tree the counted marks use,
+# so a marker in a comment or after a return is no more a finding here than it
+# is a point there. Each check is a property of the source alone, so every
+# validator derives the identical list from the agreed bytes.
+# ---------------------------------------------------------------------------
+
+#: (id, rule, title, fix), published by `rules()`. A report stores only the id,
+#: the line and the name a finding is about, and the page joins the two.
+RULE_CHECKS: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "write_without_sender",
+        "05",
+        "A write never reads who called it",
+        "read gl.message.sender_address, or keep it open on purpose and say why in a test",
+    ),
+    (
+        "storage_type",
+        "GenVM",
+        "A storage field uses a type the runtime refuses at deploy",
+        "use u256, i64, bigint, str, bool, bytes, Address, DynArray or TreeMap",
+    ),
+    (
+        "undeclared_field",
+        "GenVM",
+        "A field is written on self without being declared, so it is discarded",
+        "declare the field with its type in the class body",
+    ),
+    (
+        "storage_constructor",
+        "GenVM",
+        "A storage collection is built with its own constructor",
+        "build it with gl.storage.inmem_allocate(DynArray[T]) instead",
+    ),
+    (
+        "wall_clock",
+        "GenVM",
+        "The contract reads a clock it does not have",
+        "use gl.message_raw['datetime'], the only deterministic clock",
+    ),
+    (
+        "nondet_outside_block",
+        "GenVM",
+        "A non-deterministic call is reachable from no block",
+        "call it only from a function handed to gl.vm.run_nondet or an equivalence principle",
+    ),
+    (
+        "identity_compare",
+        "GenVM",
+        "A storage value is compared by identity",
+        "compare with ==, since storage builds a fresh view on every read",
+    ),
+)
+
+_RULES_BLOCKS = (
+    "gl.eq_principle.strict_eq",
+    "gl.eq_principle.prompt_comparative",
+    "gl.eq_principle.prompt_non_comparative",
+    "gl.vm.run_nondet",
+    "gl.vm.run_nondet_unsafe",
+)
+_RULES_REFUSED = ("int", "list", "dict", "tuple")
+_RULES_COLLECTIONS = ("DynArray", "TreeMap")
+_RULES_CLOCKS = (
+    "time.time",
+    "time.time_ns",
+    "time.monotonic",
+    "datetime.now",
+    "datetime.utcnow",
+    "datetime.today",
+    "datetime.datetime.now",
+    "datetime.datetime.utcnow",
+    "datetime.datetime.today",
+    "date.today",
+    "datetime.date.today",
+)
+_RULES_PER_CHECK = 5
+_RULES_MAX = 20
+
+
+def _rules_heads(node: typing.Any) -> list[str]:
+    """Every name a type annotation is built from: `list[str]` is list and str."""
+    out: list[str] = []
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Name):
+            out.append(sub.id)
+        elif isinstance(sub, ast.Attribute):
+            out.append(sub.attr)
+    return out
+
+
+def _rules_is_contract(cls: typing.Any) -> bool:
+    return any(_dotted(b) in ("gl.Contract", "Contract") for b in cls.bases)
+
+
+def _rules_is_storage(cls: typing.Any) -> bool:
+    return any((_dotted(d) or _fn_name(d)).endswith("allow_storage") for d in cls.decorator_list)
+
+
+def _rules_self_attrs(target: typing.Any) -> list[str]:
+    """`self.x = ...` names x. `self.x[k] = ...` mutates a declared field, and
+    names nothing."""
+    if isinstance(target, (ast.Tuple, ast.List)):
+        out: list[str] = []
+        for elt in target.elts:
+            out.extend(_rules_self_attrs(elt))
+        return out
+    if (
+        isinstance(target, ast.Attribute)
+        and isinstance(target.value, ast.Name)
+        and target.value.id == "self"
+    ):
+        return [target.attr]
+    return []
+
+
+def _rules_self_root(node: typing.Any) -> str:
+    """The first field `self.` reaches in a chain of lookups, or ""."""
+    while True:
+        if isinstance(node, ast.Subscript):
+            node = node.value
+        elif isinstance(node, ast.Call):
+            node = node.func
+        elif isinstance(node, ast.Attribute):
+            if isinstance(node.value, ast.Name) and node.value.id == "self":
+                return node.attr
+            node = node.value
+        else:
+            return ""
+
+
+def _rules_callee(call: typing.Any) -> str:
+    if isinstance(call.func, ast.Name):
+        return call.func.id
+    if isinstance(call.func, ast.Attribute):
+        return call.func.attr
+    return ""
+
+
+def _rules_writes(tree: typing.Any) -> list[tuple[int, str, str]]:
+    """Writes that neither read the sender nor call anything that does.
+
+    One helper that checks the sender for many methods is still a check, so the
+    readers are settled as a fixpoint over calls by name. A name shared by two
+    definitions counts as a reader if either reads it, which errs towards
+    passing a write rather than accusing one.
+    """
+    defs = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+    def reads(fn: typing.Any) -> bool:
+        return any(isinstance(n, ast.Attribute) and n.attr in ("sender_address", "origin_address") for n in ast.walk(fn))
+
+    def calls_reader(fn: typing.Any, readers: set) -> bool:
+        return any(isinstance(n, ast.Call) and _rules_callee(n) in readers for n in ast.walk(fn))
+
+    readers = {fn.name for fn in defs if reads(fn)}
+    grew = True
+    while grew:
+        grew = False
+        for fn in defs:
+            if fn.name not in readers and calls_reader(fn, readers):
+                readers.add(fn.name)
+                grew = True
+
+    out: list[tuple[int, str, str]] = []
+    for cls in ast.walk(tree):
+        if not (isinstance(cls, ast.ClassDef) and _rules_is_contract(cls)):
+            continue
+        for fn in cls.body:
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            write = any(
+                (_dotted(d) or _fn_name(d)).startswith("gl.public.write") for d in fn.decorator_list
+            )
+            if write and not reads(fn) and not calls_reader(fn, readers):
+                out.append((fn.lineno, "write_without_sender", fn.name))
+    return out
+
+
+def _rules_fields(tree: typing.Any) -> list[tuple[int, str, str]]:
+    """Storage types the runtime refuses, and fields written on self that the
+    class never declared."""
+    out: list[tuple[int, str, str]] = []
+    for cls in ast.walk(tree):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        contract = _rules_is_contract(cls)
+        storage = _rules_is_storage(cls)
+        if not (contract or storage):
+            continue
+        declared: set[str] = set()
+        for stmt in cls.body:
+            if not (isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name)):
+                continue
+            declared.add(stmt.target.id)
+            heads = _rules_heads(stmt.annotation)
+            if "ClassVar" in heads:
+                continue
+            label = stmt.target.id if contract else f"{cls.name}.{stmt.target.id}"
+            refused = [h for h in heads if h in _RULES_REFUSED]
+            if refused:
+                out.append((stmt.lineno, "storage_type", f"{label}: {refused[0]}"))
+        if not contract:
+            continue
+        written: dict[str, int] = {}
+        for fn in cls.body:
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for n in ast.walk(fn):
+                if isinstance(n, ast.Assign):
+                    targets = list(n.targets)
+                elif isinstance(n, (ast.AugAssign, ast.AnnAssign)):
+                    targets = [n.target]
+                else:
+                    continue
+                for t in targets:
+                    for attr in _rules_self_attrs(t):
+                        if attr not in written or n.lineno < written[attr]:
+                            written[attr] = n.lineno
+        for attr, line in written.items():
+            if attr not in declared:
+                out.append((line, "undeclared_field", attr))
+    return out
+
+
+def _rules_constructors(tree: typing.Any) -> list[tuple[int, str, str]]:
+    """`DynArray[T]()` and `TreeMap[K, V]()`, which raise on a node.
+
+    Declaring a collection inside a storage dataclass is fine, and live
+    contracts do it. What the runtime refuses is building one with its own
+    constructor, since only storage may allocate one, so that is what this
+    reads for."""
+    out: list[tuple[int, str, str]] = []
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        head = n.func.value if isinstance(n.func, ast.Subscript) else n.func
+        if isinstance(head, ast.Name):
+            name = head.id
+        elif isinstance(head, ast.Attribute):
+            name = head.attr
+        else:
+            continue
+        if name in _RULES_COLLECTIONS:
+            out.append((n.lineno, "storage_constructor", name))
+    return out
+
+
+def _rules_clocks(tree: typing.Any) -> list[tuple[int, str, str]]:
+    return [
+        (n.lineno, "wall_clock", _fn_name(n))
+        for n in ast.walk(tree)
+        if isinstance(n, ast.Call) and _fn_name(n) in _RULES_CLOCKS
+    ]
+
+
+def _rules_identity(tree: typing.Any) -> list[tuple[int, str, str]]:
+    out: list[tuple[int, str, str]] = []
+    for n in ast.walk(tree):
+        if not (isinstance(n, ast.Compare) and any(isinstance(op, (ast.Is, ast.IsNot)) for op in n.ops)):
+            continue
+        sides = [n.left] + list(n.comparators)
+        if any(
+            isinstance(s, ast.Constant) and (s.value is None or s.value is True or s.value is False)
+            for s in sides
+        ):
+            continue
+        roots = [r for r in (_rules_self_root(s) for s in sides) if r]
+        if roots:
+            out.append((n.lineno, "identity_compare", f"self.{roots[0]}"))
+    return out
+
+
+def _rules_nondet(tree: typing.Any) -> list[tuple[int, str, str]]:
+    """Non-deterministic calls no block can reach.
+
+    Names resolve lexically, innermost function first, so the `one` handed to a
+    block inside one method is that method's `one` and not the first `one` in
+    the file. Reach then follows calls out from whatever the blocks are handed,
+    which is why a helper that fetches a page on a block's behalf is fine and
+    the same call made straight from a write is not.
+    """
+    edges: dict[int, set[int]] = {}
+    roots: set[int] = set()
+    calls: list[tuple[int, int, str]] = []
+
+    def defs_in(scope: typing.Any) -> dict[str, typing.Any]:
+        found: dict[str, typing.Any] = {}
+        stack = list(ast.iter_child_nodes(scope))
+        while stack:
+            node = stack.pop()
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                found.setdefault(node.name, node)
+                continue
+            if isinstance(node, (ast.Lambda, ast.ClassDef)):
+                continue
+            stack.extend(ast.iter_child_nodes(node))
+        return found
+
+    module_defs = defs_in(tree)
+
+    def resolve(expr: typing.Any, chain: list, methods: dict) -> typing.Any:
+        if isinstance(expr, ast.Name):
+            for defs in reversed(chain):
+                if expr.id in defs:
+                    return defs[expr.id]
+            return module_defs.get(expr.id)
+        if (
+            isinstance(expr, ast.Attribute)
+            and isinstance(expr.value, ast.Name)
+            and expr.value.id == "self"
+        ):
+            return methods.get(expr.attr)
+        if isinstance(expr, ast.Lambda):
+            return expr
+        if isinstance(expr, ast.Call) and expr.args:
+            return resolve(expr.args[0], chain, methods)
+        return None
+
+    def visit(node: typing.Any, scope: int, chain: list, methods: dict) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, ast.ClassDef):
+                own = {
+                    m.name: m
+                    for m in child.body
+                    if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))
+                }
+                visit(child, scope, chain, own)
+                continue
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                visit(child, id(child), chain + [defs_in(child)], methods)
+                continue
+            if isinstance(child, ast.Lambda):
+                visit(child, id(child), chain, methods)
+                continue
+            if isinstance(child, ast.Call):
+                name = _fn_name(child)
+                if name in _RULES_BLOCKS:
+                    for arg in list(child.args) + [k.value for k in child.keywords]:
+                        target = resolve(arg, chain, methods)
+                        if target is not None:
+                            roots.add(id(target))
+                elif name.startswith("gl.nondet."):
+                    calls.append((scope, child.lineno, name))
+                target = resolve(child.func, chain, methods)
+                if target is not None:
+                    edges.setdefault(scope, set()).add(id(target))
+            visit(child, scope, chain, methods)
+
+    visit(tree, 0, [], {})
+    reach = set(roots)
+    stack = list(roots)
+    while stack:
+        here = stack.pop()
+        for there in edges.get(here, set()):
+            if there not in reach:
+                reach.add(there)
+                stack.append(there)
+    return [(line, "nondet_outside_block", name) for scope, line, name in calls if scope not in reach]
+
+
+def rule_findings(source: str) -> list[dict]:
+    """Every finding in a source, earliest line first, capped per check and in
+    total.
+
+    Read off the pruned tree, so what cannot run is not reported. A source that
+    will not parse has already been refused by the gate or scored as not code,
+    and gets no findings rather than a guess at them.
+    """
+    try:
+        tree = _reachable(ast.parse(source))
+        found = (
+            _rules_writes(tree)
+            + _rules_fields(tree)
+            + _rules_constructors(tree)
+            + _rules_clocks(tree)
+            + _rules_nondet(tree)
+            + _rules_identity(tree)
+        )
+    except Exception:
+        return []
+    order = {row[0]: i for i, row in enumerate(RULE_CHECKS)}
+    found.sort(key=lambda f: (f[0], order.get(f[1], 99), f[2]))
+    kept: list[dict] = []
+    per: dict[str, int] = {}
+    for line, check, name in found:
+        if per.get(check, 0) >= _RULES_PER_CHECK or len(kept) >= _RULES_MAX:
+            continue
+        per[check] = per.get(check, 0) + 1
+        kept.append({"check": check, "line": int(line), "name": str(name)[:60]})
+    return kept
+
+
+def _rules_type_text(node: typing.Any) -> str:
+    if node is None:
+        return ""
+    try:
+        return ast.unparse(node)[:40]
+    except Exception:
+        return _dotted(node)[:40]
+
+
+def constructor_of(source: str) -> list[dict]:
+    """The deploy form, read off the contract's __init__: every parameter after
+    self, its annotation, and whether it can be left out."""
+    try:
+        tree = ast.parse(source)
+    except Exception:
+        return []
+    for cls in ast.walk(tree):
+        if not (isinstance(cls, ast.ClassDef) and _rules_is_contract(cls)):
+            continue
+        for fn in cls.body:
+            if not (isinstance(fn, ast.FunctionDef) and fn.name == "__init__"):
+                continue
+            positional = list(fn.args.posonlyargs) + list(fn.args.args)
+            params = positional[1:]
+            first_default = len(params) - len(fn.args.defaults)
+            out: list[dict] = []
+            for i, a in enumerate(params):
+                out.append(
+                    {
+                        "name": a.arg,
+                        "type": _rules_type_text(a.annotation),
+                        "optional": i >= first_default,
+                        "keyword": False,
+                    }
+                )
+            for a, default in zip(fn.args.kwonlyargs, fn.args.kw_defaults):
+                out.append(
+                    {
+                        "name": a.arg,
+                        "type": _rules_type_text(a.annotation),
+                        "optional": default is not None,
+                        "keyword": True,
+                    }
+                )
+            return out[:12]
+        return []
+    return []
+
+
+# ---------------------------------------------------------------------------
 # The non-deterministic rounds. Module level rather than methods, so a closure
 # handed to cloudpickle can never capture `self` and drag a storage handle into
 # a sandbox with it.
@@ -2018,6 +2463,18 @@ class Unison(gl.Contract):
         )
 
     @gl.public.view
+    def rules(self) -> str:
+        """The rules check, published so every finding can be read against it.
+
+        Same reasoning as `rubric()`: a report stores only the id and the line,
+        and the title and the fix are read from here rather than from a copy
+        the site keeps."""
+        return json.dumps(
+            [{"id": c, "rule": r, "title": t, "fix": f} for c, r, t, f in RULE_CHECKS],
+            sort_keys=True,
+        )
+
+    @gl.public.view
     def gate_spec(self) -> str:
         """The gate, probes and all.
 
@@ -2200,6 +2657,10 @@ class Unison(gl.Contract):
                     for r in checked["rows"]
                 ],
             },
+            # Advisory. Never scored, never part of a total, and derived from the
+            # same agreed bytes as everything above it.
+            "rules": rule_findings(source),
+            "init_params": constructor_of(source),
             "subjects": subjects,
         }
 

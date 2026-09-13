@@ -41,7 +41,7 @@ const POLL_EVERY_MS = 4000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type Tx = {
+export type Tx = {
   status?: string | number;
   status_name?: string;
   result?: unknown;
@@ -100,7 +100,7 @@ async function pollTx(hash: string): Promise<Tx | null> {
   }
 }
 
-function leaderOf(tx: Tx | null): Record<string, unknown> | null {
+export function leaderOf(tx: Tx | null): Record<string, unknown> | null {
   const raw = tx?.consensus_data?.leader_receipt;
   const rounds = Array.isArray(raw) ? raw : raw ? [raw] : [];
   // Pick the round whose mode is leader rather than index 0: later rounds are
@@ -203,7 +203,7 @@ export function refusalOf(tx: Tx | null): string {
  * status ACCEPTED", which would tell somebody their submission failed while it
  * was still being marked.
  */
-async function follow(
+export async function follow(
   hash: string,
   onStage: (stage: Stage) => void,
 ): Promise<{ tx: Tx | null; settled: string }> {
