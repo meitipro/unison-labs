@@ -35,7 +35,7 @@
  * which of those two worlds we are in.
  */
 
-import { IS_STUDIO, RPC_URL, CHAIN } from "./chain";
+import { IS_STUDIO, RPC_URL, CHAIN, toAddress } from "./chain";
 
 export const DECIMALS = CHAIN.nativeCurrency?.decimals ?? 18;
 export const SYMBOL = CHAIN.nativeCurrency?.symbol ?? "GEN";
@@ -57,10 +57,24 @@ async function rpc(method: string, params: unknown[]): Promise<unknown> {
   return json.result;
 }
 
+/**
+ * A fourth measured fact, and the one that made the other three look wrong.
+ *
+ * A LOWERCASE ADDRESS IS A DIFFERENT ACCOUNT TO STUDIO. `sim_fundAccount`
+ * given one answers with a hash, reports no error, and credits nothing, while
+ * the same address checksummed is credited in full. `eth_getBalance` reads by
+ * the same string. A wallet hands out the lowercase form, so both calls below
+ * canonicalise before they go anywhere near the node. Measured against Studio
+ * and Studio Next on 2026-09-16.
+ */
+function canonical(address: string): string {
+  return toAddress(address) || address;
+}
+
 /** Wei held by an address, or null when the node did not answer. */
 export async function balanceOf(address: string): Promise<bigint | null> {
   try {
-    const raw = await rpc("eth_getBalance", [address, "latest"]);
+    const raw = await rpc("eth_getBalance", [canonical(address), "latest"]);
     if (typeof raw !== "string") return null;
     return BigInt(raw);
   } catch {
@@ -107,7 +121,7 @@ export async function requestFunds(address: string, gen = FAUCET_GEN): Promise<F
     throw new Error("That amount cannot be sent exactly, so it was not sent at all.");
   }
   try {
-    const hash = await rpc("sim_fundAccount", [address, Number(wei)]);
+    const hash = await rpc("sim_fundAccount", [canonical(address), Number(wei)]);
     return { hash: typeof hash === "string" ? hash : "" };
   } catch (error) {
     const message = String((error as Error)?.message ?? "");

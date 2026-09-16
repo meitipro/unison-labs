@@ -15,6 +15,26 @@
  * A leaf module with no relative imports, so tests/parity runs it directly.
  */
 
+import { getAddress } from "viem";
+
+/**
+ * EIP-55, AND IT DECIDES WHETHER ANY OF THIS WORKS.
+ *
+ * `sim_fundAccount` given a lowercase address answers with a transaction hash,
+ * reports no error, and credits nothing: the balance sits where it was. The
+ * same address checksummed is credited in full. Measured against Studio and
+ * Studio Next on 2026-09-16, and a wallet hands out the lowercase form, so
+ * every address here goes through this on the way to a node.
+ */
+function canonical(address: string): string {
+  const text = (address || "").trim();
+  try {
+    return getAddress(text as `0x${string}`);
+  } catch {
+    return text;
+  }
+}
+
 /** Ten GEN, which covers a deploy on either Studio network many times over. */
 export const FAUCET_AMOUNT_WEI = 10000000000000000000;
 
@@ -30,7 +50,7 @@ async function rpc(url: string, method: string, params: unknown[]): Promise<unkn
 
 export async function balanceOf(url: string, address: string): Promise<bigint | null> {
   try {
-    const raw = await rpc(url, "eth_getBalance", [address, "latest"]);
+    const raw = await rpc(url, "eth_getBalance", [canonical(address), "latest"]);
     return typeof raw === "string" ? BigInt(raw) : null;
   } catch {
     return null;
@@ -48,7 +68,7 @@ export async function fundFromNode(
 ): Promise<FaucetOutcome> {
   const before = await balanceOf(url, address);
   try {
-    await rpc(url, "sim_fundAccount", [address, amountWei]);
+    await rpc(url, "sim_fundAccount", [canonical(address), amountWei]);
   } catch {
     /* Deliberately swallowed: the balance below is the answer, and this node
        has answered with an error while crediting the account anyway. */

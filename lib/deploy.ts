@@ -17,6 +17,7 @@
 import { createClient } from "genlayer-js";
 
 import { addressArg } from "./calldataAddress";
+import { toAddress } from "./chain";
 import { chainIdHex, labelForChainId, type DeployTarget } from "./networks";
 import { wrongNetwork } from "./copy";
 import type { Eip1193Provider as EthereumProvider } from "./eip6963";
@@ -188,7 +189,16 @@ async function balanceOn(rpc: string, address: string): Promise<bigint> {
     const response = await fetch(rpc, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }),
+      /* Checksummed, because Studio reads a balance by the exact string it is
+         given and a wallet hands out the lowercase form: asking with that
+         reads an account nobody has funded, and refuses a deploy from one
+         that is. */
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_getBalance",
+        params: [toAddress(address) || address, "latest"],
+      }),
     });
     const body = await response.json();
     const raw = body?.result;

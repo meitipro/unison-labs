@@ -17,9 +17,11 @@ const ADDRESS = "0x1111111111111111111111111111111111111111";
 function node({ balances, fundThrows = false }) {
   let call = 0;
   const seen = [];
+  globalThis.__addresses = [];
   globalThis.fetch = async (_url, init) => {
     const body = JSON.parse(init.body);
     seen.push(body.method);
+    globalThis.__addresses.push(body.params[0]);
     if (body.method === "sim_fundAccount") {
       if (fundThrows) throw new Error("Internal error");
       return { json: async () => ({ result: "0xhash" }) };
@@ -58,4 +60,20 @@ test("wei reads as GEN in a sentence", () => {
   assert.equal(gen(0n), "0");
   assert.equal(gen(1500000000000000000n), "1.5");
   assert.equal(gen(1n), "0");
+});
+
+test("the address reaches the node checksummed, whatever the wallet handed over", async () => {
+  // A lowercase address is a different account to Studio: sim_fundAccount
+  // answers with a hash, reports no error, and credits nothing, while the same
+  // address checksummed is credited in full. Wallets hand out the lowercase
+  // form, so this is the difference between a faucet and a button that lies.
+  node({ balances: ["0x0", "0x8ac7230489e80000"] });
+  await fundFromNode("https://node.test/api", "0xabcdef0123456789abcdef0123456789abcdef01");
+  assert.deepEqual(new Set(globalThis.__addresses), new Set(["0xabCDeF0123456789AbcdEf0123456789aBCDEF01"]));
+});
+
+test("an address that is not an address is passed through rather than mangled", async () => {
+  node({ balances: ["0x0", "0x1"] });
+  await fundFromNode("https://node.test/api", "not-an-address");
+  assert.deepEqual(new Set(globalThis.__addresses), new Set(["not-an-address"]));
 });
