@@ -77,7 +77,19 @@ export const SPEC: GateSpec = {
       required: true,
       mode: "any",
       scope: "all",
-      probes: ["(gl.Contract)", "( gl.Contract )", "(gl.Contract,", "(gl.Contract )"],
+      // Both spellings of the base class: consensus v0.6 declares it through
+      // the module. This list is the chain's own, and `gate_spec()` is what
+      // the browser actually runs.
+      probes: [
+        "(gl.Contract)",
+        "( gl.Contract )",
+        "(gl.Contract,",
+        "(gl.Contract )",
+        "(gl.contract.Contract)",
+        "( gl.contract.Contract )",
+        "(gl.contract.Contract,",
+        "(gl.contract.Contract )",
+      ],
     },
     {
       id: "nondet",

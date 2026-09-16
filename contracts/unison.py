@@ -109,7 +109,21 @@ GATE: tuple[tuple[str, str, bool, str, str, tuple[str, ...]], ...] = (
         True,
         "any",
         "all",
-        ("(gl.Contract)", "( gl.Contract )", "(gl.Contract,", "(gl.Contract )"),
+        (
+            # Consensus v0.6 declares the base class through the module
+            # (`gl.contract.Contract`) rather than at the top of `gl`. A
+            # contract written for the newer runtime is a contract, and a
+            # gate that only knew the older spelling refused it at a
+            # REQUIRED row, so it could never be marked at all.
+            "(gl.Contract)",
+            "( gl.Contract )",
+            "(gl.Contract,",
+            "(gl.Contract )",
+            "(gl.contract.Contract)",
+            "( gl.contract.Contract )",
+            "(gl.contract.Contract,",
+            "(gl.contract.Contract )",
+        ),
     ),
     (
         "nondet",
@@ -1766,7 +1780,7 @@ def _rules_heads(node: typing.Any) -> list[str]:
 
 
 def _rules_is_contract(cls: typing.Any) -> bool:
-    return any(_dotted(b) in ("gl.Contract", "Contract") for b in cls.bases)
+    return any(_dotted(b) in ("gl.Contract", "gl.contract.Contract", "Contract") for b in cls.bases)
 
 
 def _rules_is_storage(cls: typing.Any) -> bool:

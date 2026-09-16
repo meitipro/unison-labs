@@ -172,6 +172,36 @@ check(
 )
 check("  the gate always reports six checks", plain["total"], 6)
 
+# Both spellings of the base class, because a gate that refuses one of them
+# refuses a contract that could then never be marked at all.
+#
+# Consensus v0.6 declares it through the module, and the official v0.6
+# boilerplate is written that way. Until this was added, every contract
+# written for Studio Next failed a REQUIRED gate row in the browser, before
+# a validator was ever asked.
+_V05_CLASS = '''from genlayer import *
+class A(gl.Contract):
+    pass
+'''
+_V06_CLASS = '''import genlayer as gl
+class A(gl.contract.Contract):
+    pass
+'''
+_NOT_A_CONTRACT = '''import json
+class A(dict):
+    pass
+'''
+
+
+def _contract_row(source: str) -> bool:
+    rows = M["gate_of"](M["normalise"](source))["rows"]
+    return [r["passed"] for r in rows if r["id"] == "contract"] == [True]
+
+
+check_true("the older class spelling is a contract", _contract_row(_V05_CLASS))
+check_true("the v0.6 class spelling is one too", _contract_row(_V06_CLASS))
+check("a class that is neither is not", _contract_row(_NOT_A_CONTRACT), False)
+
 check(
     "the required checks are the four the spec names",
     [c[0] for c in M["GATE"] if c[2]],
