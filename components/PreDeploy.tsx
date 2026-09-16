@@ -360,6 +360,14 @@ export default function PreDeploy({
           </div>
         ) : null}
 
+        {/* Whatever the wallet last refused with, on the card that asked it.
+            A switch that fails silently is a button that does nothing. */}
+        {wallet.problem ? (
+          <p className="body" style={{ margin: "10px 0 0", maxWidth: "62ch" }}>
+            {wallet.problem}
+          </p>
+        ) : null}
+
         {phase.at === "done" ? (
           <div style={{ marginTop: 18 }}>
             <p className="body" style={{ margin: 0, overflowWrap: "anywhere" }}>

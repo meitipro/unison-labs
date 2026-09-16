@@ -46,6 +46,7 @@ import { ADD_CHAIN_PARAMS, CHAIN, CHAIN_ID_HEX, NETWORK_LABEL } from "./chain";
 import { discoverWallets, type DiscoveredWallet, type Eip1193Provider } from "./eip6963";
 import { balanceOf } from "./funds";
 import { readableError } from "./voice";
+import { unknownChain } from "./walletErrors";
 
 declare global {
   interface Window {
@@ -279,18 +280,29 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await confirm();
       return true;
     } catch (error) {
-      // 4902 means the wallet has never heard of this chain, which is the
-      // normal case for a testnet: add it, then it is switched to.
-      const code = (error as { code?: number })?.code;
-      if (code === 4902) {
+      console.error("[unison] the wallet would not switch network:", error);
+      if (unknownChain(error)) {
         try {
           await eth.request({
             method: "wallet_addEthereumChain",
             params: [to?.addParams ?? ADD_CHAIN_PARAMS],
           });
+          /* Adding usually switches too, but it is not promised, and a wallet
+             that added without switching leaves the screen saying the network
+             is wrong while the network is sitting there. Asking again is
+             harmless where it already happened. */
+          try {
+            await eth.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: to?.chainIdHex ?? CHAIN_ID_HEX }],
+            });
+          } catch {
+            /* The add is what mattered; confirm() reads what really happened. */
+          }
           await confirm();
           return true;
         } catch (addError) {
+          console.error("[unison] the wallet would not add the network:", addError);
           setProblem(readableError(addError));
           return false;
         }
