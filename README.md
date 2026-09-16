@@ -104,9 +104,11 @@ That boundary is the whole architecture:
 ## The contract
 
 **12 public methods, 9 view and 3 write**, `genvm-lint` clean, pinned to a
-concrete runner hash rather than an alias. `contracts/test_helpers.py` runs 371
-checks over its pure half on plain CPython, and `tests/parity` re-derives the
-gate in TypeScript so the browser and the chain cannot drift apart.
+concrete runner hash rather than an alias. `contracts/test_helpers.py` runs 374
+checks over its pure half on plain CPython, and `tests/parity` runs 68 more in
+TypeScript, re-deriving the gate so the browser and the chain cannot drift
+apart and pinning what reaches a node: the deploy targets, the faucet, the
+calldata for an address and the shapes a wallet refuses in.
 
 ### Behaviour worth knowing
 
