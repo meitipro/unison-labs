@@ -22,6 +22,12 @@ export function readableError(error: unknown): string {
   const raw = String((error as Error)?.message ?? error ?? "");
   const code = (error as { code?: number })?.code;
 
+  /* An error this product wrote is already in this product's voice, and the
+     rules below would flatten it: a sentence naming two networks matches the
+     chain rule and would come back out as "a different network", which is the
+     one thing the person reading it already believes is wrong. */
+  if ((error as { humane?: boolean })?.humane && raw) return raw;
+
   if (code === 4001 || /user rejected|user denied|rejected the request/i.test(raw)) {
     return "Nothing was signed, so nothing was submitted. The gate above ran in this browser and cost nothing.";
   }

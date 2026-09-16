@@ -17,10 +17,20 @@
 import { createClient } from "genlayer-js";
 
 import { addressArg } from "./calldataAddress";
-import type { DeployTarget } from "./networks";
+import { chainIdHex, labelForChainId, type DeployTarget } from "./networks";
+import { wrongNetwork } from "./copy";
 import type { Eip1193Provider as EthereumProvider } from "./eip6963";
 import { digest as digestOf, normalise } from "./gate";
-import { follow, leaderOf, refusalOf, type Stage, type Tx } from "./writes";
+import {
+  chainOf,
+  follow,
+  leaderOf,
+  namedMismatch,
+  readableError,
+  refusalOf,
+  type Stage,
+  type Tx,
+} from "./writes";
 import type { InitParam, Report } from "./types";
 
 export type DeployStage =
@@ -286,16 +296,30 @@ export async function deployReviewed(opts: {
     }
   }
 
+  /* Read from the wallet itself, now, rather than from what a screen was
+     told when it rendered: the network can be changed in another tab between
+     the two. A wallet that does not answer is not treated as wrong. */
+  const on = await chainOf(provider);
+  if (on && on !== chainIdHex(target).toLowerCase()) {
+    return { ok: false, why: wrongNetwork(labelForChainId(on), target.label) };
+  }
+
   onStage("signing");
-  const hash = String(
-    await client.deployContract({
-      code,
-      args: built.args,
-      kwargs: built.kwargs,
-      leaderOnly: false,
-      ...(fees ? { fees } : {}),
-    }),
-  );
+  let hash: string;
+  try {
+    hash = String(
+      await client.deployContract({
+        code,
+        args: built.args,
+        kwargs: built.kwargs,
+        leaderOnly: false,
+        ...(fees ? { fees } : {}),
+      }),
+    );
+  } catch (error) {
+    const named = namedMismatch(String((error as Error)?.message ?? error));
+    return { ok: false, why: named ? named.message : readableError(error) };
+  }
   onStage("sent");
 
   const { tx, settled } = await follow(

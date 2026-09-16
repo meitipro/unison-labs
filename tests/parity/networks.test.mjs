@@ -17,6 +17,7 @@ import {
   chainIdHex,
   explorerAddressOn,
   explorerTxOn,
+  labelForChainId,
   targetByChainId,
   targetById,
 } from "../../lib/networks.ts";
@@ -84,4 +85,18 @@ test("every target says the one thing worth knowing before it is chosen", () => 
     assert.ok(t.note.length > 20, `${t.id} has no note`);
     assert.ok(t.label.length > 0);
   }
+});
+
+test("a chain id can always be named, and 4221 names both", () => {
+  // No message in this product may say "a different network" to somebody
+  // looking at the right one, so every id has to come back as something a
+  // person can compare against what their wallet shows.
+  assert.equal(labelForChainId(61999), "Studio");
+  assert.equal(labelForChainId("0xf22f"), "Studio");
+  assert.equal(labelForChainId(61997), "Studio Next");
+  assert.equal(labelForChainId("0xf22d"), "Studio Next");
+  assert.equal(labelForChainId(4221), "Asimov or Bradbury");
+  assert.equal(labelForChainId(61127), "a local node");
+  assert.equal(labelForChainId(999), "chain 999");
+  assert.equal(labelForChainId("not a number"), "an unknown network");
 });

@@ -19,7 +19,9 @@
 import { createClient } from "genlayer-js";
 import type { Hash } from "genlayer-js/types";
 
-import { CHAIN, RPC_URL, CONTRACT } from "./chain";
+import { CHAIN, CHAIN_ID_HEX, RPC_URL, CONTRACT } from "./chain";
+import { labelForChainId } from "./networks";
+import { wrongNetwork } from "./copy";
 import type { Eip1193Provider as EthereumProvider } from "./eip6963";
 
 // Pure text, kept apart so its rules can be tested without an RPC client.
@@ -250,6 +252,48 @@ function wallet(account: `0x${string}`, provider?: EthereumProvider) {
   return createClient({ chain: CHAIN, account, ...(provider ? { provider } : {}) });
 }
 
+/**
+ * The wallet's chain, read from the wallet, at the moment of the write.
+ *
+ * Not from state held in a component: a wallet can be switched in another tab,
+ * or by another page on this site, between a screen rendering and a button
+ * being pressed, and a guard reading a stale copy either blocks a write that
+ * would have worked or lets one through that cannot.
+ *
+ * Null means the wallet did not answer, which is not the same as being on the
+ * wrong chain, so it is never treated as one.
+ */
+export async function chainOf(provider?: EthereumProvider): Promise<string | null> {
+  if (!provider) return null;
+  try {
+    const id = await provider.request({ method: "eth_chainId" });
+    return typeof id === "string" ? id.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** An error already written in this product's voice. `lib/voice.ts` leaves it alone. */
+export function humane(message: string): Error {
+  const error = new Error(message);
+  (error as Error & { humane?: boolean }).humane = true;
+  return error;
+}
+
+/**
+ * viem says which two chains disagreed, and that is worth keeping.
+ *
+ * "The current chain of the wallet (id: 61997) does not match the target chain
+ * for the transaction (id: 61999)" became "The wallet is pointed at a
+ * different network", which names neither and reads as an accusation to
+ * somebody looking at the right network in their wallet.
+ */
+export function namedMismatch(raw: string): Error | null {
+  const hit = /wallet \(id:\s*(\d+)\)[\s\S]*?\(id:\s*(\d+)\)/i.exec(raw);
+  if (!hit) return null;
+  return humane(wrongNetwork(labelForChainId(Number(hit[1])), labelForChainId(Number(hit[2]))));
+}
+
 const RETRYABLE =
   /fetch failed|unknown rpc error|ECONNRESET|ETIMEDOUT|socket hang up|intrinsic gas too low/i;
 
@@ -260,6 +304,11 @@ async function send(
   provider?: EthereumProvider,
   attempts = 4,
 ): Promise<Hash> {
+  const on = await chainOf(provider);
+  if (on && on !== CHAIN_ID_HEX.toLowerCase()) {
+    throw humane(wrongNetwork(labelForChainId(on), labelForChainId(CHAIN_ID_HEX)));
+  }
+
   const client = wallet(account, provider);
   for (let i = 1; i <= attempts; i += 1) {
     try {
@@ -279,7 +328,7 @@ async function send(
         await sleep(2000 * i);
         continue;
       }
-      throw error;
+      throw namedMismatch(message) ?? error;
     }
   }
   throw new Error("The node would not take the transaction.");

@@ -88,6 +88,23 @@ export function targetByChainId(chainId: number): DeployTarget | null {
   return found.length === 1 ? found[0] : null;
 }
 
+/**
+ * What to call a chain id on screen.
+ *
+ * Every message about the wrong network names both sides, because "a
+ * different network" tells somebody who believes they are on the right one
+ * nothing they can act on. 4221 is deliberately not given a single name: two
+ * networks answer to it.
+ */
+export function labelForChainId(id: string | number): string {
+  const n = typeof id === "string" ? Number.parseInt(id, id.startsWith("0x") ? 16 : 10) : id;
+  if (!Number.isFinite(n)) return "an unknown network";
+  if (n === 4221) return "Asimov or Bradbury";
+  if (n === 61127) return "a local node";
+  const known = DEPLOY_TARGETS.find((t) => t.chainId === n);
+  return known ? known.label : `chain ${n}`;
+}
+
 export function chainIdHex(target: DeployTarget): string {
   return `0x${target.chainId.toString(16)}`;
 }

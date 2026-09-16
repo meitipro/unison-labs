@@ -160,3 +160,15 @@ test("the refusal is built from the three parts chapter five allows", () => {
   assert.match(refused, /no fee is charged and no validator spends inference on it\.$/, "what follows");
   assertVoice(refused, "the refusal");
 });
+
+test("a message this product wrote is not reworded by the voice layer", () => {
+  // The rule below it turns anything mentioning a network and a switch into
+  // "The wallet is pointed at a different network", which is exactly the
+  // sentence that sent somebody looking for a bug that was not there.
+  const ours = Object.assign(new Error("Your wallet is on Studio Next, and this runs on Studio, so nothing was submitted. Point the wallet at Studio and press the button again."), { humane: true });
+  assert.equal(readableError(ours), ours.message);
+
+  // A library error still gets translated.
+  const theirs = new Error("ChainMismatchError: chain mismatch, unsupported network");
+  assert.equal(readableError(theirs), "The wallet is pointed at a different network, so nothing was submitted.");
+});

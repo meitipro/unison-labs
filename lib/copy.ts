@@ -330,6 +330,9 @@ export const DEPLOY_NETWORK_NOTE =
 export function deployButton(network: string): string {
   return `Deploy on ${network}`;
 }
+export function wrongNetwork(on: string, need: string): string {
+  return `Your wallet is on ${on}, and this runs on ${need}, so nothing was submitted. Point the wallet at ${need} and press the button again.`;
+}
 export function switchRefused(network: string): string {
   return `The wallet is not on ${network}, so nothing was signed. Switch it there and press the button again.`;
 }
