@@ -235,7 +235,10 @@ export default function AppConsole({
           wallet.provider ?? undefined,
         );
       } catch (error) {
-        setPhase({ at: "refused", gate, why: readableError(error) });
+        // The library's own sentence, kept where a person can read it back to
+        // us. The screen gets the product's voice; the console gets the fact.
+        console.error("[unison] the assay did not land:", error);
+        setPhase({ at: "refused", gate, why: readableError(error, NETWORK_LABEL) });
         return;
       }
 

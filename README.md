@@ -21,10 +21,10 @@ read the source themselves.
 | | |
 | --- | --- |
 | Site | [unisonlabs.tech](https://unisonlabs.tech) |
-| Contract | [`0xCB6eBD0373FD5eD6151FA000A7Aa11E2343087c4`](https://explorer-studio.genlayer.com/address/0xCB6eBD0373FD5eD6151FA000A7Aa11E2343087c4) on GenLayer studionet |
+| Contract | [`0x4aEAfA02AA10f465E03eBC1488b4C9eD64D77999`](https://explorer-studio.genlayer.com/address/0x4aEAfA02AA10f465E03eBC1488b4C9eD64D77999) on GenLayer studionet |
 | Rubric | v3, frozen by the transaction that deployed the contract |
 
-`npm run match -- 0xCB6eBD0373FD5eD6151FA000A7Aa11E2343087c4` compares the
+`npm run match -- 0x4aEAfA02AA10f465E03eBC1488b4C9eD64D77999` compares the
 deployed bytes against `contracts/unison.py`, byte for byte. Line endings are
 pinned to LF in `.gitattributes` so that comparison does not depend on who ran
 the deploy.

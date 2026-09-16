@@ -18,7 +18,15 @@
  * declining is not a failure of the submission either, so it does not read like
  * one.
  */
-export function readableError(error: unknown): string {
+/**
+ * `expected` is the network the caller needs, by name.
+ *
+ * Without it the only honest thing to say about a chain error is that the
+ * wallet is somewhere else, which is exactly the sentence that reads as wrong
+ * to somebody looking at the right network. Every caller that knows the answer
+ * passes it, and then the message names it.
+ */
+export function readableError(error: unknown, expected?: string): string {
   const raw = String((error as Error)?.message ?? error ?? "");
   const code = (error as { code?: number })?.code;
 
@@ -40,8 +48,21 @@ export function readableError(error: unknown): string {
   if (/insufficient funds|intrinsic gas/i.test(raw)) {
     return "The account cannot cover this transaction, so nothing was submitted.";
   }
+  /* A wallet that already has a window open is not on the wrong network. It
+     used to be reported as one, because the method it is busy with is called
+     wallet_switchEthereumChain and the rule below matched its name. */
+  if (/already pending|already in progress|request of type/i.test(raw)) {
+    return "Your wallet already has a request open, so nothing was submitted. Answer that one first, then press this again.";
+  }
+  if (/unrecognized chain|chain.{0,12}not (been )?added|add.{0,12}chain/i.test(raw)) {
+    return expected
+      ? `Your wallet does not have ${expected} added yet, so nothing was submitted. Add it in the wallet and press this again.`
+      : "Your wallet does not have this network added yet, so nothing was submitted.";
+  }
   if (/chain|network/i.test(raw) && /mismatch|unsupported|switch/i.test(raw)) {
-    return "The wallet is pointed at a different network, so nothing was submitted.";
+    return expected
+      ? `Your wallet is not on ${expected}, so nothing was submitted. Point it at ${expected} and press this again.`
+      : "The wallet is pointed at a different network, so nothing was submitted.";
   }
   if (/fetch failed|unknown rpc|ECONNRESET|ETIMEDOUT|socket hang up/i.test(raw)) {
     return "The node did not answer, so nothing was submitted. Nothing was spent.";

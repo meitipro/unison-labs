@@ -156,7 +156,8 @@ export default function PreDeploy({
       }
       setPhase({ at: "done", address: outcome.address, matches: outcome.matches, target });
     } catch (error) {
-      setPhase({ at: "refused", why: readableError(error) });
+      console.error("[unison] the deploy did not land:", error);
+      setPhase({ at: "refused", why: readableError(error, target.label) });
     }
   };
 
