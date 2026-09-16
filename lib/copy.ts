@@ -324,7 +324,15 @@ export const DEPLOY_TITLE = "Deploy these exact bytes";
 export const DEPLOY_NOTE =
   "The file is fetched again and has to hash to this report's digest before anything is signed, so what goes on chain is exactly what was reviewed. It deploys from your own wallet, and the new contract is yours.";
 export const DEPLOY_ARGS = "What the constructor asks for";
-export const DEPLOY_BUTTON = "Deploy this contract";
+export const DEPLOY_NETWORK = "Which network";
+export const DEPLOY_NETWORK_NOTE =
+  "A review is about bytes, not about a network, so the same reviewed file can go wherever you want it to run. Your wallet is asked to switch before anything is signed.";
+export function deployButton(network: string): string {
+  return `Deploy on ${network}`;
+}
+export function switchRefused(network: string): string {
+  return `The wallet is not on ${network}, so nothing was signed. Switch it there and press the button again.`;
+}
 export const DEPLOY_DONE_LEAD = "Deployed at";
 export const DEPLOY_MATCH = "The deployed bytes hash to this report's digest.";
 export const DEPLOY_MISMATCH =

@@ -17,7 +17,15 @@
 import { useMemo, useState } from "react";
 
 import * as copy from "../lib/copy";
-import { NETWORK_LABEL, HAS_EXPLORER, explorerAddress } from "../lib/chain";
+import {
+  DEPLOY_TARGETS,
+  DEFAULT_TARGET_ID,
+  addChainParams,
+  chainIdHex,
+  explorerAddressOn,
+  targetById,
+  type DeployTarget,
+} from "../lib/networks";
 import { useWallet } from "../lib/wallet";
 import { readableError } from "../lib/voice";
 import { suggestionsFor } from "../lib/suggest";
@@ -28,7 +36,10 @@ type Phase =
   | { at: "idle" }
   | { at: "working"; stage: DeployStage }
   | { at: "refused"; why: string }
-  | { at: "done"; address: string; matches: boolean | null };
+  /* The target is carried on the result rather than read from the picker,
+     so changing the picker afterwards cannot relabel a deploy that already
+     happened or point its link at the wrong explorer. */
+  | { at: "done"; address: string; matches: boolean | null; target: DeployTarget };
 
 const STAGES: Record<DeployStage, string> = {
   fetching: "Fetching the file again",
@@ -83,6 +94,8 @@ export default function PreDeploy({
      report that knows. */
   const knowsCtor = Array.isArray(report.init_params);
   const findings = Array.isArray(report.rules) ? report.rules : null;
+  const [targetId, setTargetId] = useState(DEFAULT_TARGET_ID);
+  const target = targetById(targetId) ?? DEPLOY_TARGETS[0];
   const [values, setValues] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<Phase>({ at: "idle" });
   const busy = phase.at === "working";
@@ -112,13 +125,18 @@ export default function PreDeploy({
         return;
       }
     }
-    if (!wallet.onRightChain) {
-      const switched = await wallet.switchChain();
+    /* Against the chosen network, not against the one this site reads. Asimov
+       and Bradbury share chain id 4221, so a wallet sitting on either counts
+       as switched for both, and the node the deploy is submitted to is what
+       decides where it lands. */
+    const onTarget = (wallet.chainId ?? "").toLowerCase() === chainIdHex(target).toLowerCase();
+    if (!onTarget) {
+      const switched = await wallet.switchChain({
+        chainIdHex: chainIdHex(target),
+        addParams: addChainParams(target),
+      });
       if (!switched) {
-        setPhase({
-          at: "refused",
-          why: `The wallet is on another network, so nothing was signed. Switch it to ${NETWORK_LABEL} and try again.`,
-        });
+        setPhase({ at: "refused", why: wallet.problem || copy.switchRefused(target.label) });
         return;
       }
     }
@@ -129,13 +147,14 @@ export default function PreDeploy({
         account,
         provider: wallet.provider ?? undefined,
         values,
+        target,
         onStage: (stage) => setPhase({ at: "working", stage }),
       });
       if (!outcome.ok) {
         setPhase({ at: "refused", why: outcome.why });
         return;
       }
-      setPhase({ at: "done", address: outcome.address, matches: outcome.matches });
+      setPhase({ at: "done", address: outcome.address, matches: outcome.matches, target });
     } catch (error) {
       setPhase({ at: "refused", why: readableError(error) });
     }
@@ -236,6 +255,31 @@ export default function PreDeploy({
           {copy.DEPLOY_NOTE}
         </p>
 
+        <div style={{ marginTop: 18 }}>
+          <p className="kv-key" style={{ margin: "0 0 4px" }}>
+            {copy.DEPLOY_NETWORK}
+          </p>
+          <p className="body dim" style={{ margin: "0 0 8px", maxWidth: "62ch" }}>
+            {copy.DEPLOY_NETWORK_NOTE}
+          </p>
+          <select
+            aria-label={copy.DEPLOY_NETWORK}
+            style={{ ...FIELD, marginTop: 0, maxWidth: 340 }}
+            value={targetId}
+            disabled={busy}
+            onChange={(e) => setTargetId(e.target.value)}
+          >
+            {DEPLOY_TARGETS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <p className="body dim" style={{ margin: "8px 0 0", maxWidth: "62ch" }}>
+            {target.note}
+          </p>
+        </div>
+
         {params.length > 0 ? (
           <div style={{ marginTop: 18 }}>
             <p className="kv-key" style={{ margin: "0 0 10px" }}>
@@ -280,9 +324,14 @@ export default function PreDeploy({
         {phase.at === "done" ? (
           <div style={{ marginTop: 18 }}>
             <p className="body" style={{ margin: 0, overflowWrap: "anywhere" }}>
-              {copy.DEPLOY_DONE_LEAD}{" "}
-              {HAS_EXPLORER ? (
-                <a href={explorerAddress(phase.address)} target="_blank" rel="noreferrer" className="mono">
+              {copy.DEPLOY_DONE_LEAD} {phase.target.label},{" "}
+              {phase.target.explorer ? (
+                <a
+                  href={explorerAddressOn(phase.target, phase.address)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mono"
+                >
                   {phase.address}
                 </a>
               ) : (
@@ -311,7 +360,7 @@ export default function PreDeploy({
             disabled={busy}
             onClick={() => void deploy()}
           >
-            {busy ? STAGES[phase.stage] : copy.DEPLOY_BUTTON}
+            {busy ? STAGES[phase.stage] : copy.deployButton(target.label)}
           </button>
         ) : (
           <p className="body dim" style={{ margin: "18px 0 0", maxWidth: "62ch" }}>

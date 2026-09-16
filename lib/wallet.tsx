@@ -77,9 +77,18 @@ export type WalletState = {
    *  won the race to set `window.ethereum`. */
   provider: Eip1193Provider | null;
   connect: (wallet?: DiscoveredWallet) => Promise<`0x${string}` | null>;
-  switchChain: () => Promise<boolean>;
+  /** Switches to the network the site runs on, or to the one passed in: the
+   *  deploy lets an author pick where their contract goes, and the wallet has
+   *  to follow that choice rather than this site's. */
+  switchChain: (to?: ChainToSwitchTo) => Promise<boolean>;
   disconnect: () => void;
   refreshBalance: () => Promise<void>;
+};
+
+/** Enough of a network for a wallet to switch to it, or to add it first. */
+export type ChainToSwitchTo = {
+  chainIdHex: string;
+  addParams: Record<string, unknown>;
 };
 
 const WalletContext = createContext<WalletState | null>(null);
@@ -234,7 +243,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [pick],
   );
 
-  const switchChain = useCallback(async (): Promise<boolean> => {
+  const switchChain = useCallback(async (to?: ChainToSwitchTo): Promise<boolean> => {
     const eth = pick();
     if (!eth) return false;
     setProblem("");
@@ -265,7 +274,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       await eth.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: CHAIN_ID_HEX }],
+        params: [{ chainId: to?.chainIdHex ?? CHAIN_ID_HEX }],
       });
       await confirm();
       return true;
@@ -277,7 +286,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         try {
           await eth.request({
             method: "wallet_addEthereumChain",
-            params: [ADD_CHAIN_PARAMS],
+            params: [to?.addParams ?? ADD_CHAIN_PARAMS],
           });
           await confirm();
           return true;

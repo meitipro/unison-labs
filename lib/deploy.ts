@@ -17,7 +17,7 @@
 import { createClient } from "genlayer-js";
 
 import { addressArg } from "./calldataAddress";
-import { CHAIN, RPC_URL } from "./chain";
+import type { DeployTarget } from "./networks";
 import type { Eip1193Provider as EthereumProvider } from "./eip6963";
 import { digest as digestOf, normalise } from "./gate";
 import { follow, leaderOf, refusalOf, type Stage, type Tx } from "./writes";
@@ -41,6 +41,65 @@ export type DeployStage =
 export type DeployOutcome =
   | { ok: true; address: string; hash: string; matches: boolean | null }
   | { ok: false; why: string; hash?: string };
+
+/**
+ * A client pointed at the network the author picked, not at this site's.
+ *
+ * Studio Next runs the newer consensus, and the sdk that reaches it cannot
+ * read the older networks, so both are installed and the import is chosen
+ * here. Doing it lazily also keeps the second copy out of the bundle of
+ * everybody who deploys where the review was run.
+ *
+ * The chain object comes from the sdk, so nothing about fees or encoding is
+ * invented here, and only its rpc is replaced: Asimov and Bradbury share chain
+ * id 4221, and the node a transaction is submitted to is the only thing that
+ * decides which of the two it lands on.
+ */
+type DeployClient = {
+  deployContract: (args: Record<string, unknown>) => Promise<unknown>;
+  /** Only the newer sdk has this, and only the newer networks charge. */
+  estimateTransactionFees?: () => Promise<unknown>;
+};
+
+function withRpc(base: unknown, rpc: string): unknown {
+  const chain = base as { rpcUrls: { default: { http: string[] } } };
+  return {
+    ...(base as object),
+    rpcUrls: { ...chain.rpcUrls, default: { ...chain.rpcUrls.default, http: [rpc] } },
+  };
+}
+
+async function clientFor(
+  target: DeployTarget,
+  account: `0x${string}`,
+  provider?: EthereumProvider,
+): Promise<DeployClient> {
+  const rest = provider ? { provider } : {};
+  if (target.runtime === "v06") {
+    const [sdk, chains] = await Promise.all([
+      import("genlayer-js-next"),
+      import("genlayer-js-next/chains"),
+    ]);
+    const base = (chains as unknown as Record<string, unknown>).studioDevnet;
+    return sdk.createClient({
+      chain: withRpc(base, target.rpc) as never,
+      account,
+      ...rest,
+    }) as unknown as DeployClient;
+  }
+  const chains = await import("genlayer-js/chains");
+  const known: Record<string, unknown> = {
+    studionet: chains.studionet,
+    asimov: chains.testnetAsimov,
+    bradbury: chains.testnetBradbury,
+  };
+  const base = known[target.id] ?? chains.studionet;
+  return createClient({
+    chain: withRpc(base, target.rpc) as never,
+    account,
+    ...rest,
+  }) as unknown as DeployClient;
+}
 
 export type ArgKind = "text" | "number" | "bool" | "address" | "json";
 
@@ -113,10 +172,26 @@ function addressFrom(tx: Tx | null): string | null {
   return typeof found === "string" && found ? found : null;
 }
 
-/** The deployed source, read back off the chain, or null if the node did not answer. */
-async function readBack(address: string): Promise<string | null> {
+/** Wei on the chosen network, or 0n where the node did not answer. */
+async function balanceOn(rpc: string, address: string): Promise<bigint> {
   try {
-    const response = await fetch(RPC_URL, {
+    const response = await fetch(rpc, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }),
+    });
+    const body = await response.json();
+    const raw = body?.result;
+    return typeof raw === "string" ? BigInt(raw) : 0n;
+  } catch {
+    return 0n;
+  }
+}
+
+/** The deployed source, read back off the chain, or null if the node did not answer. */
+async function readBack(address: string, rpc: string): Promise<string | null> {
+  try {
+    const response = await fetch(rpc, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "gen_getContractCode", params: [address] }),
@@ -146,9 +221,11 @@ export async function deployReviewed(opts: {
   account: `0x${string}`;
   provider?: EthereumProvider;
   values: Record<string, string>;
+  /** The network the author chose to deploy on. */
+  target: DeployTarget;
   onStage: (stage: DeployStage) => void;
 }): Promise<DeployOutcome> {
-  const { report, account, provider, values, onStage } = opts;
+  const { report, account, provider, values, target, onStage } = opts;
   const params = Array.isArray(report.init_params) ? report.init_params : [];
 
   onStage("fetching");
@@ -179,21 +256,55 @@ export async function deployReviewed(opts: {
     return { ok: false, why: (error as Error).message };
   }
 
+  /*
+   * A network with fees refuses a transaction that carries none, and it does
+   * that AFTER the wallet has been opened and signed: `FeeValueMustBeNonZero`
+   * on a deploy sent to Studio Next with an empty account. Both of the things
+   * that avoids are here, before anything is signed.
+   */
+  const client = await clientFor(target, account, provider);
+  let fees: unknown = undefined;
+  if (target.runtime === "v06") {
+    const balance = await balanceOn(target.rpc, account);
+    if (balance === 0n) {
+      return {
+        ok: false,
+        why: `This account holds no GEN on ${target.label}, and that network charges fees, so nothing was signed. Fund it there first.`,
+      };
+    }
+    if (typeof client.estimateTransactionFees === "function") {
+      try {
+        // Quoted by the network rather than written down here, so a change in
+        // its prices cannot strand this button.
+        fees = await client.estimateTransactionFees();
+      } catch {
+        return {
+          ok: false,
+          why: `${target.label} did not quote a fee for this deploy, so nothing was signed. That is the network not answering rather than a refusal.`,
+        };
+      }
+    }
+  }
+
   onStage("signing");
-  const client = createClient({ chain: CHAIN, account, ...(provider ? { provider } : {}) });
   const hash = String(
     await client.deployContract({
       code,
-      args: built.args as never,
-      kwargs: built.kwargs as never,
+      args: built.args,
+      kwargs: built.kwargs,
       leaderOnly: false,
+      ...(fees ? { fees } : {}),
     }),
   );
   onStage("sent");
 
-  const { tx, settled } = await follow(hash, (stage: Stage) => {
-    if (stage === "accepted" || stage === "finalized") onStage(stage);
-  });
+  const { tx, settled } = await follow(
+    hash,
+    (stage: Stage) => {
+      if (stage === "accepted" || stage === "finalized") onStage(stage);
+    },
+    target.rpc,
+  );
   if (settled === "SLOW") {
     return {
       ok: false,
@@ -219,7 +330,7 @@ export async function deployReviewed(opts: {
   }
 
   onStage("verifying");
-  const back = await readBack(address);
+  const back = await readBack(address, target.rpc);
   const matches = back === null ? null : (await digestOf(normalise(back))) === report.digest;
   return { ok: true, address, hash, matches };
 }

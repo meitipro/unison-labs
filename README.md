@@ -69,7 +69,7 @@ one file rather than at two readings of it.
 | 5 | Validators fetch the source | Every one of them fetches it itself and agrees on the bytes under `strict_eq` |
 | 6 | They mark it | Counted criteria in deterministic code, judged criteria by inference, both against anchors published in advance |
 | 7 | The contract sums and bands | Arithmetic, in the contract. No model is ever asked for a total |
-| 8 | You deploy the reviewed bytes, if you choose | The browser fetches the file again, refuses unless it hashes to the report's digest, and deploys from your wallet |
+| 8 | You deploy the reviewed bytes, if you choose | The browser fetches the file again, refuses unless it hashes to the report's digest, and deploys from your wallet, on whichever of the four networks you pick |
 
 Where the jury does not land on the same answer **no report is issued at all**,
 because averaging a disagreement produces a number nobody voted for. The review
@@ -152,6 +152,15 @@ gate in TypeScript so the browser and the chain cannot drift apart.
   from the author's own wallet, then reads the new contract back and says
   whether its bytes match. The constructor form is read off `__init__` by the
   contract and stored on the report as `init_params`.
+- **The deploy goes where the author wants it, not where the review ran.**
+  Studio, Studio Next, Asimov and Bradbury, each with its own node, its own
+  explorer link and its own wallet prompt. Asimov and Bradbury share chain id
+  4221, so the node a transaction is submitted to is the only thing that
+  separates them, and every call takes it from the chosen target. Studio Next
+  runs the newer consensus: fees are quoted from that network before anything
+  is signed, an empty account is told so rather than being asked to sign, and
+  a source pinned to a runner it does not have is refused by the network, since
+  nothing here rewrites a byte that was reviewed.
 - **The two subjects are never added together.** A careful contract behind a
   careless site is a different problem from the reverse, and one number for both
   hides which you have.

@@ -79,9 +79,13 @@ export type Outcome =
   | { kind: "split"; hash: string; why: string; votes: Votes | null }
   | { kind: "slow"; hash: string; why: string };
 
-async function pollTx(hash: string): Promise<Tx | null> {
+/* `rpc` defaults to the network this site runs on, and is passed in only by
+   the deploy, which follows a transaction on whichever network the author
+   chose. Polling the site's node for a transaction sent to another one would
+   report a perfectly healthy deploy as never arriving. */
+async function pollTx(hash: string, rpc: string = RPC_URL): Promise<Tx | null> {
   try {
-    const response = await fetch(RPC_URL, {
+    const response = await fetch(rpc, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -206,12 +210,13 @@ export function refusalOf(tx: Tx | null): string {
 export async function follow(
   hash: string,
   onStage: (stage: Stage) => void,
+  rpc: string = RPC_URL,
 ): Promise<{ tx: Tx | null; settled: string }> {
   const started = Date.now();
   let sawAccepted = false;
 
   while (Date.now() - started < WAIT_BUDGET_MS) {
-    const tx = await pollTx(hash);
+    const tx = await pollTx(hash, rpc);
     const status = String(tx?.status_name ?? tx?.status ?? "");
 
     if (!sawAccepted && (status === "ACCEPTED" || status === "FINALIZED")) {
