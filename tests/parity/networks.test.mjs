@@ -100,3 +100,17 @@ test("a chain id can always be named, and 4221 names both", () => {
   assert.equal(labelForChainId(999), "chain 999");
   assert.equal(labelForChainId("not a number"), "an unknown network");
 });
+
+test("each network says how an account gets GEN there", () => {
+  // Checked against the nodes: sim_fundAccount credited 10 GEN on Studio and
+  // on Studio Next. The public testnets hand out from a page instead, and
+  // claiming otherwise would put a button there that could only fail.
+  const byId = Object.fromEntries(DEPLOY_TARGETS.map((t) => [t.id, t]));
+  assert.equal(byId["studionet"].faucet.kind, "node");
+  assert.equal(byId["studio-next"].faucet.kind, "node");
+  assert.equal(byId["asimov"].faucet.kind, "page");
+  assert.equal(byId["bradbury"].faucet.kind, "page");
+  for (const t of DEPLOY_TARGETS) {
+    if (t.faucet.kind === "page") assert.match(t.faucet.url, /^https:\/\//);
+  }
+});

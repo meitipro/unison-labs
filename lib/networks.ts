@@ -33,7 +33,17 @@ export type DeployTarget = {
   runtime: Runtime;
   /** The one thing somebody choosing this network needs to know first. */
   note: string;
+  /**
+   * How an account gets GEN here.
+   *
+   * "node" means the node funds it on request, which both Studio networks do
+   * through `sim_fundAccount`, checked against each of them. "page" is a
+   * faucet somebody has to visit, so the product can only send them there.
+   */
+  faucet: { kind: "node" } | { kind: "page"; url: string } | null;
 };
+
+const TESTNET_FAUCET = "https://testnet-faucet.genlayer.foundation/";
 
 const GEN = { name: "GEN Token", symbol: "GEN", decimals: 18 } as const;
 
@@ -46,6 +56,7 @@ export const DEPLOY_TARGETS: readonly DeployTarget[] = [
     explorer: "https://explorer-studio.genlayer.com",
     runtime: "v05",
     note: "Charges nothing, and the network this review was run on.",
+    faucet: { kind: "node" },
   },
   {
     id: "studio-next",
@@ -55,6 +66,7 @@ export const DEPLOY_TARGETS: readonly DeployTarget[] = [
     explorer: "https://explorer-studio-dev.genlayer.com",
     runtime: "v06",
     note: "The newer consensus, with fees on. It runs a different runtime, so a contract pinned to the older one is refused by the network rather than by this page.",
+    faucet: { kind: "node" },
   },
   {
     id: "asimov",
@@ -64,6 +76,7 @@ export const DEPLOY_TARGETS: readonly DeployTarget[] = [
     explorer: "https://explorer-asimov.genlayer.com",
     runtime: "v05",
     note: "A public testnet, so the account needs a balance before it can deploy.",
+    faucet: { kind: "page", url: TESTNET_FAUCET },
   },
   {
     id: "bradbury",
@@ -73,6 +86,7 @@ export const DEPLOY_TARGETS: readonly DeployTarget[] = [
     explorer: "https://explorer-bradbury.genlayer.com",
     runtime: "v05",
     note: "Shares chain id 4221 with Asimov, so a wallet cannot tell the two apart. The node this deploy is sent to is what decides which one it lands on.",
+    faucet: { kind: "page", url: TESTNET_FAUCET },
   },
 ];
 

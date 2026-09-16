@@ -31,6 +31,7 @@ import { useWallet } from "../lib/wallet";
 import { readableError } from "../lib/voice";
 import { suggestionsFor } from "../lib/suggest";
 import { deployReviewed, kindOf, missingArgs, type DeployStage } from "../lib/deploy";
+import { fundFromNode, gen } from "../lib/faucet";
 import type { Report, Rubric, RuleCheck } from "../lib/types";
 
 type Phase =
@@ -50,6 +51,15 @@ const STAGES: Record<DeployStage, string> = {
   accepted: "Accepted, waiting for finality",
   finalized: "Finalized",
   verifying: "Reading the deployed bytes back",
+};
+
+/* A button whose label names a network is longer than a 320px screen, and the
+   house button does not wrap its text, so these two say they may. */
+const WRAPS: React.CSSProperties = {
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  textAlign: "left",
+  lineHeight: 1.3,
 };
 
 const FIELD: React.CSSProperties = {
@@ -105,6 +115,9 @@ export default function PreDeploy({
   const needsSwitch =
     Boolean(wallet.address) && walletChain !== "" && walletChain !== chainIdHex(target).toLowerCase();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [faucet, setFaucet] = useState<{ at: "idle" | "working" } | { at: "said"; text: string }>({
+    at: "idle",
+  });
   const [phase, setPhase] = useState<Phase>({ at: "idle" });
   const busy = phase.at === "working";
 
@@ -116,6 +129,21 @@ export default function PreDeploy({
     [report, rubric],
   );
   const checkById = useMemo(() => new Map((ruleChecks ?? []).map((c) => [c.id, c])), [ruleChecks]);
+
+  const fund = async () => {
+    if (!wallet.address || target.faucet?.kind !== "node") return;
+    setFaucet({ at: "working" });
+    const outcome = await fundFromNode(target.rpc, wallet.address);
+    setFaucet({
+      at: "said",
+      text: outcome.ok
+        ? copy.faucetDone(gen(outcome.balance), target.label)
+        : outcome.why === "unmoved"
+          ? copy.FAUCET_UNMOVED
+          : copy.FAUCET_UNREADABLE,
+    });
+    void wallet.refreshBalance();
+  };
 
   const deploy = async () => {
     const missing = missingArgs(params, values);
@@ -276,7 +304,12 @@ export default function PreDeploy({
             style={{ ...FIELD, marginTop: 0, maxWidth: 340 }}
             value={targetId}
             disabled={busy}
-            onChange={(e) => setTargetId(e.target.value)}
+            onChange={(e) => {
+              setTargetId(e.target.value);
+              // A sentence about one network's faucet says nothing true about
+              // the next one's.
+              setFaucet({ at: "idle" });
+            }}
           >
             {DEPLOY_TARGETS.map((t) => (
               <option key={t.id} value={t.id}>
@@ -343,6 +376,7 @@ export default function PreDeploy({
             <button
               type="button"
               className="btn btn-quiet"
+              style={WRAPS}
               disabled={busy}
               onClick={() =>
                 void wallet.switchChain({
@@ -356,6 +390,44 @@ export default function PreDeploy({
             </button>
             <span className="body dim" style={{ fontSize: 13 }}>
               {copy.onOtherNetwork(labelForChainId(walletChain), target.label)}
+            </span>
+          </div>
+        ) : null}
+
+        {/* Getting GEN, where the network hands it out. Both Studio networks
+            fund an account from their own node; the public testnets do it from
+            a page, so the link goes there rather than pretending otherwise. */}
+        {wallet.address && target.faucet ? (
+          <div
+            style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}
+          >
+            {target.faucet.kind === "node" ? (
+              <button
+                type="button"
+                className="btn btn-quiet"
+                style={WRAPS}
+                disabled={busy || faucet.at === "working"}
+                onClick={() => void fund()}
+              >
+                {faucet.at === "working" ? copy.FAUCET_WORKING : copy.faucetButton(target.label)}
+              </button>
+            ) : (
+              <a
+                className="btn btn-quiet"
+                href={target.faucet.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ ...WRAPS, textDecoration: "none" }}
+              >
+                {copy.faucetPage(target.label)}
+              </a>
+            )}
+            <span className="body dim" style={{ fontSize: 13 }}>
+              {faucet.at === "said"
+                ? faucet.text
+                : target.faucet.kind === "node"
+                  ? ""
+                  : copy.FAUCET_PAGE_NOTE}
             </span>
           </div>
         ) : null}

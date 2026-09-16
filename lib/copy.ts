@@ -330,6 +330,23 @@ export const DEPLOY_NETWORK_NOTE =
 export function deployButton(network: string): string {
   return `Deploy on ${network}`;
 }
+export function faucetButton(network: string): string {
+  return `Fund this account on ${network}`;
+}
+export function faucetPage(network: string): string {
+  return `Open the ${network} faucet`;
+}
+export const FAUCET_WORKING = "Asking the node for GEN";
+export function faucetDone(amount: string, network: string): string {
+  return `Funded. This account now holds ${amount} GEN on ${network}.`;
+}
+export const FAUCET_UNMOVED =
+  "The node took the request and the balance did not move, so nothing was funded. Try once more, and if it stays put the faucet is the thing to report.";
+export const FAUCET_UNREADABLE =
+  "The node did not answer with a balance, so whether it funded the account is unknown. Read it in your wallet before deploying.";
+export const FAUCET_PAGE_NOTE =
+  "This network funds an account from a page rather than from its node, so the faucet opens in a new tab.";
+
 export function onOtherNetwork(on: string, need: string): string {
   return `Your wallet is on ${on}, and this deploy goes to ${need}.`;
 }
