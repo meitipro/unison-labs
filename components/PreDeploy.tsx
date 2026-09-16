@@ -23,6 +23,7 @@ import {
   addChainParams,
   chainIdHex,
   explorerAddressOn,
+  labelForChainId,
   targetById,
   type DeployTarget,
 } from "../lib/networks";
@@ -96,6 +97,13 @@ export default function PreDeploy({
   const findings = Array.isArray(report.rules) ? report.rules : null;
   const [targetId, setTargetId] = useState(DEFAULT_TARGET_ID);
   const target = targetById(targetId) ?? DEPLOY_TARGETS[0];
+  /* The wallet's network, as the wallet last reported it. The write path
+     reads it again at the moment of signing; this is only what the screen
+     offers, and offering it is the point: learning at the end of a deploy that
+     the wallet was somewhere else is a worse way to find out. */
+  const walletChain = (wallet.chainId ?? "").toLowerCase();
+  const needsSwitch =
+    Boolean(wallet.address) && walletChain !== "" && walletChain !== chainIdHex(target).toLowerCase();
   const [values, setValues] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<Phase>({ at: "idle" });
   const busy = phase.at === "working";
@@ -319,6 +327,36 @@ export default function PreDeploy({
                 </label>
               );
             })}
+          </div>
+        ) : null}
+
+        {needsSwitch ? (
+          <div
+            style={{
+              marginTop: 18,
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-quiet"
+              disabled={busy}
+              onClick={() =>
+                void wallet.switchChain({
+                  chainIdHex: chainIdHex(target),
+                  addParams: addChainParams(target),
+                })
+              }
+            >
+              <span className="dot" style={{ background: "var(--fail)" }} />
+              {copy.switchTo(target.label)}
+            </button>
+            <span className="body dim" style={{ fontSize: 13 }}>
+              {copy.onOtherNetwork(labelForChainId(walletChain), target.label)}
+            </span>
           </div>
         ) : null}
 
