@@ -48,7 +48,7 @@ carries on GenLayer. The registry is 3,467 bytes of code; the source's sha256 is
 
 | | Result |
 | --- | --- |
-| `forge test` in `contracts/evm` | 15 pass: 14 unit and fuzz (1,000 runs), covering a wrong signer, every field of the attestation altered in turn, an expired signature, a malformed one, the high-s twin of a signature, a signature for another deployment, marks out of range, a second anchor of the same report, rotation of the attestor, and an owner who cannot edit a record |
+| `forge test` in `contracts/evm` | 15 pass: 14 unit and 1 fuzz (1,000 runs), covering a wrong signer, every field of the attestation altered in turn, an expired signature, a malformed one, the high-s twin of a signature, a signature for another deployment, marks out of range, a second anchor of the same report, rotation of the attestor, and an owner who cannot edit a record |
 | Fork of Base Sepolia | 1 pass (`BASE_SEPOLIA_RPC_URL=https://sepolia.base.org forge test --match-contract Fork`) |
 | Live | deployed, one real report anchored, read back, a repeat refused |
 
