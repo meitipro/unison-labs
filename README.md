@@ -23,6 +23,7 @@ read the source themselves.
 | Site | [unisonlabs.tech](https://unisonlabs.tech) |
 | Contract | [`0x4aEAfA02AA10f465E03eBC1488b4C9eD64D77999`](https://explorer-studio.genlayer.com/address/0x4aEAfA02AA10f465E03eBC1488b4C9eD64D77999) on GenLayer studionet |
 | Rubric | v3, frozen by the transaction that deployed the contract |
+| Base Sepolia | [`UnisonRegistry`](https://sepolia.basescan.org/address/0x52CAcB7D5448Be8807A98f4A3FD976ceDc6a4B69) records finished reports so a contract there can read the mark: `meets(digest, 7)`. See [docs/milestone-v2.md](docs/milestone-v2.md) |
 
 `npm run match -- 0x4aEAfA02AA10f465E03eBC1488b4C9eD64D77999` compares the
 deployed bytes against `contracts/unison.py`, byte for byte. Line endings are

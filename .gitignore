@@ -37,3 +37,7 @@ __pycache__/
 # Throwaway probes. These get written at the repo root while checking something
 # on chain, and one rode into a commit.
 _*.mjs
+
+contracts/evm/cache
+contracts/evm/broadcast
+contracts/evm/out
